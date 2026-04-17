@@ -2910,6 +2910,26 @@
           return;
         }
 
+        setLoaderMainMessage('예약 중복 여부를 확인하는 중입니다...');
+        const companyIdNum = parseInt(companyIdRaw, 10);
+        const { data: dupRows, error: dupErr } = await sb
+          .from('reservations')
+          .select('id')
+          .eq('reservation_date', date)
+          .eq('company_id', companyIdNum)
+          .neq('status', '반려')
+          .limit(1);
+        if (dupErr) {
+          hideBookingLoader();
+          alert('예약 중복 확인 오류: ' + (dupErr.message || String(dupErr)));
+          return;
+        }
+        if (dupRows && dupRows.length > 0) {
+          hideBookingLoader();
+          alert('이미 해당 날짜에 동일 업체 예약 신청 내역이 존재합니다. (1일 1회 제한)');
+          return;
+        }
+
         setLoaderMainMessage('서류 파일을 업로드하는 중입니다...');
         const reservationId = crypto.randomUUID();
         const files = [

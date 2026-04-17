@@ -35,7 +35,7 @@ export function checkBookingSubmitBlockedBySourceIp(
     return {
       ok: false,
       message:
-        "사내 인터넷망에서는 예약 신청을 완료할 수 없습니다. 외부망 또는 업체 네트워크에서 다시 시도해 주세요.",
+        "사내 인터넷망에서는 예약 신청을 완료할 수 없습니다. 외부망에서 다시 시도해주세요.",
     };
   }
   return { ok: true };

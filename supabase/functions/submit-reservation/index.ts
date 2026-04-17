@@ -370,6 +370,24 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  const { data: dupCompany, error: dupErr } = await sb
+    .from("reservations")
+    .select("id")
+    .eq("reservation_date", date)
+    .eq("company_id", companyId)
+    .neq("status", "반려")
+    .limit(1);
+  if (dupErr) {
+    return json(200, { ok: false, error: "예약 중복 확인 오류: " + dupErr.message });
+  }
+  if (dupCompany && dupCompany.length > 0) {
+    return json(200, {
+      ok: false,
+      error:
+        "이미 해당 날짜에 동일 업체 예약 신청 내역이 존재합니다. (1일 1회 제한)",
+    });
+  }
+
   const timeSlot = str(body.reservation_time).substring(0, 5);
   if (!timeSlot) {
     return json(200, { ok: false, error: "예약 시간을 선택해 주세요." });
@@ -379,13 +397,8 @@ Deno.serve(async (req: Request) => {
   const car2 = str(body.car_number_2);
   const materialInfo = str(body.material_info);
   const personInfo = str(body.person_info);
-  const doc1 = str(body.doc_url_1);
-  const doc2 = str(body.doc_url_2);
   if (!car1 || !materialInfo || !personInfo) {
     return json(200, { ok: false, error: "필수 입력 항목을 확인해 주세요." });
-  }
-  if (!doc1 || !doc2) {
-    return json(200, { ok: false, error: "필수 서류 URL이 없습니다. 파일 업로드를 다시 시도해 주세요." });
   }
 
   const vcRaw = body.vehicle_count;
@@ -416,34 +429,6 @@ Deno.serve(async (req: Request) => {
   const rr = body.recommended_reasons;
   if (Array.isArray(rr)) {
     recommendedReasons = rr.map((x) => str(x)).filter(Boolean);
-  }
-
-  let contactEnc: string;
-  let visitorEmailEnc: string | null;
-  try {
-    contactEnc = await encryptPiiContact(piiSecret, contact);
-    visitorEmailEnc = await encryptPiiEmail(piiSecret, visitorEmailPlain);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return json(200, { ok: false, error: "개인정보 암호화 처리 오류: " + msg });
-  }
-
-  const { data: existing, error: exErr } = await sb
-    .from("reservations")
-    .select("id")
-    .eq("reservation_date", date)
-    .eq("company_name", companyName)
-    .eq("contact", contactEnc)
-    .neq("status", "반려");
-  if (exErr) {
-    return json(200, { ok: false, error: "예약 중복 확인 오류: " + exErr.message });
-  }
-  if (existing && existing.length > 0) {
-    return json(200, {
-      ok: false,
-      error:
-        "이미 해당 날짜에 동일 업체/연락처 예약 신청 내역이 존재합니다. (1일 1회 제한)",
-    });
   }
 
   const { data: slotCheckRows, error: slotCheckErr } = await sb
@@ -484,6 +469,40 @@ Deno.serve(async (req: Request) => {
         error: "오늘 날짜는 현재 시각 이후 시간만 선택할 수 있습니다.",
       });
     }
+  }
+
+  const doc1 = str(body.doc_url_1);
+  const doc2 = str(body.doc_url_2);
+  if (!doc1 || !doc2) {
+    return json(200, { ok: false, error: "필수 서류 URL이 없습니다. 파일 업로드를 다시 시도해 주세요." });
+  }
+
+  let contactEnc: string;
+  let visitorEmailEnc: string | null;
+  try {
+    contactEnc = await encryptPiiContact(piiSecret, contact);
+    visitorEmailEnc = await encryptPiiEmail(piiSecret, visitorEmailPlain);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return json(200, { ok: false, error: "개인정보 암호화 처리 오류: " + msg });
+  }
+
+  const { data: dupBeforeInsert, error: dupInsErr } = await sb
+    .from("reservations")
+    .select("id")
+    .eq("reservation_date", date)
+    .eq("company_id", companyId)
+    .neq("status", "반려")
+    .limit(1);
+  if (dupInsErr) {
+    return json(200, { ok: false, error: "예약 중복 확인 오류: " + dupInsErr.message });
+  }
+  if (dupBeforeInsert && dupBeforeInsert.length > 0) {
+    return json(200, {
+      ok: false,
+      error:
+        "이미 해당 날짜에 동일 업체 예약 신청 내역이 존재합니다. (1일 1회 제한)",
+    });
   }
 
   const insertRow = {
