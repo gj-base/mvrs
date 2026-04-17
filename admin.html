@@ -568,19 +568,36 @@
       return sbClient;
     }
 
-    /** functions.invoke 실패 시 응답 본문까지 표시( Response는 한 번만 읽음 ) */
+    /** @supabase/functions-js: FunctionsHttpError 의 context 가 곧 fetch Response 인 경우가 많음 */
+    function getEdgeFunctionHttpStatus(err) {
+      if (!err || !err.context) return null;
+      try {
+        var c = err.context;
+        if (typeof c.status === 'number' && Number.isFinite(c.status)) return c.status;
+        if (c.response && typeof c.response.status === 'number') return c.response.status;
+        var n = parseInt(String(c.status), 10);
+        return Number.isFinite(n) ? n : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    /** functions.invoke 실패 시 응답 본문까지 표시( Response.body 는 한 번만 읽음 ) */
     async function formatEdgeInvokeError(err) {
       if (!err) return '';
       var base = err.message || String(err);
-      var st = null;
-      try {
-        if (err.context && typeof err.context.status === 'number') st = err.context.status;
-      } catch (e0) {}
+      var st = getEdgeFunctionHttpStatus(err);
       if (st != null) base = 'HTTP ' + st + ' — ' + base;
       try {
         var ctx = err.context;
-        if (ctx && typeof ctx.text === 'function') {
-          var raw = (await ctx.text()).trim();
+        var res =
+          ctx && typeof ctx.text === 'function' && (typeof ctx.status === 'number' || ctx.status != null)
+            ? ctx
+            : ctx && ctx.response && typeof ctx.response.text === 'function'
+              ? ctx.response
+              : null;
+        if (res) {
+          var raw = (await res.text()).trim();
           if (raw) {
             try {
               var j = JSON.parse(raw);
@@ -589,6 +606,7 @@
                 if (j.error != null) parts.push(String(j.error));
                 if (j.detail != null && String(j.detail) !== String(j.error)) parts.push(String(j.detail));
                 if (j.reason != null) parts.push(String(j.reason));
+                if (j.message != null && String(j.message) !== String(j.error)) parts.push(String(j.message));
                 if (parts.length) return base + '\n' + parts.join('\n').slice(0, 500);
               }
             } catch (pe) {
@@ -672,8 +690,9 @@
         const { data, error } = await sb.functions.invoke('verify-admin-password', {
           body: { password: pw },
         });
-        var http401 = error && error.context && typeof error.context.status === 'number' && error.context.status === 401;
-        var http403 = error && error.context && typeof error.context.status === 'number' && error.context.status === 403;
+        var httpSt = getEdgeFunctionHttpStatus(error);
+        var http401 = error && httpSt === 401;
+        var http403 = error && httpSt === 403;
         var bodyUnauthorized = data && data.ok === false && data.error === 'Unauthorized';
         if (http401 || bodyUnauthorized) {
           alert('암호가 일치하지 않습니다.');
@@ -684,7 +703,11 @@
           return;
         }
         if (error) {
-          alert('인증 요청 실패: ' + (error.message || error) + '\n\nEdge Function `verify-admin-password` 배포 및 Secrets `ADMIN_NOTIFY_SECRET` 설정을 확인해 주세요.');
+          var loginErrDetail = await formatEdgeInvokeError(error);
+          alert(
+            loginErrDetail +
+              '\n\n(참고: 비밀번호 불일치는 보통 HTTP 401입니다. 그 외는 `verify-admin-password` 배포, Secrets `ADMIN_NOTIFY_SECRET`, 허용 출구 IP `ADMIN_ALLOWED_SOURCE_IPS`·기본 IP 목록을 확인하세요.)',
+          );
           return;
         }
         if (!data || !data.ok) {
