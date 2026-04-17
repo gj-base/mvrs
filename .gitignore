@@ -1,0 +1,20 @@
+# 로컬에만 두는 Supabase CLI (용량 큼)
+.tools/
+
+# GitHub(mvrs)에 푸시용으로만 복사한 클론(중첩 .git)
+mvrs-github-push/
+
+# Cursor/MCP·로컬 실험 임시 파일
+_CALL.json
+_mcp_*.json
+_one_line.json
+_stdout*.txt
+
+# 업체 목록 엑셀 원본(용량·민감정보 가능; SQL은 scripts/excel_to_companies_sql.py 로 재생성)
+companies*.xlsx
+
+# Supabase CLI 캐시
+supabase/.temp/
+
+# DB 마이그레이션·RLS·임포트용 SQL (Git 추적 제외)
+*.sql

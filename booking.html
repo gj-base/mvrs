@@ -1,0 +1,3062 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>자재센터 불용자재 환입차량 예약시스템</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>
+    :root { --kepco-blue: #004795; --kepco-orange: #ff6600; }
+    body { background-color: #f4f7f9; font-family: 'Pretendard', sans-serif; margin: 0; padding: 0; color: #333; }
+    
+    /* 1. 와이드 헤더: 전체 너비 확장 및 요소 배치 */
+    .top-header { 
+      background: white; 
+      border-bottom: 3px solid var(--kepco-blue); 
+      padding: 12px 4%; 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      width: 100%;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .header-left { display: flex; align-items: center; }
+    .kepco-logo { height: 35px; margin-right: 18px; }
+    .system-name { 
+      color: var(--kepco-blue); 
+      font-weight: 800; 
+      font-size: 1.35rem; 
+      margin: 0; 
+      border-left: 2px solid #eee; 
+      padding-left: 18px;
+    }
+    .system-name-link {
+      color: inherit;
+      text-decoration: none;
+    }
+    .system-name-link:hover { opacity: 0.88; }
+
+    .admin-link {
+      text-decoration: none;
+      color: #6c757d;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+    .admin-link:hover { color: var(--kepco-blue); }
+
+    .header-logout-btn {
+      cursor: pointer;
+      color: #6c757d;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      background: none;
+      padding: 0;
+      font-family: inherit;
+      transition: color 0.2s;
+    }
+    .header-logout-btn:hover:not(:disabled) { color: var(--kepco-blue); }
+    .header-logout-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* 2. 컨텐츠 영역 및 성공 화면 디자인 */
+    .container.booking-layout { max-width: 1120px; margin-top: 40px; margin-bottom: 80px; }
+    .booking-main-row { align-items: flex-start; }
+    .booking-main-row > [class*="col-"] { min-height: 0; }
+    .res-summary-aside {
+      position: sticky;
+      top: var(--summary-sticky-top, 70px);
+      align-self: flex-start;
+      z-index: 100;
+      transition: box-shadow 0.2s ease;
+    }
+    .res-summary-aside.is-stuck .res-summary-card {
+      box-shadow: 0 12px 28px rgba(0, 71, 149, 0.14);
+    }
+    /* 우측 요약: 처음 구조(아이콘+라벨+값). 내부 스크롤 없음 — 페이지만 스크롤 */
+    .res-summary-card {
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 71, 149, 0.1);
+      overflow: hidden;
+      background: #fff;
+      transition: box-shadow 0.2s ease;
+    }
+    .res-summary-card .res-summary-head {
+      background: linear-gradient(180deg, #f1f5f9 0%, #e8eef6 100%);
+      border-bottom: 1px solid #e2e8f0;
+      padding: 10px 14px;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: var(--kepco-blue);
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+    }
+    .res-summary-body {
+      padding: 10px 14px 12px;
+    }
+    .res-summary-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .res-summary-row:last-of-type {
+      border-bottom: none;
+    }
+    .res-summary-icon {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: #e8f1fb;
+      color: var(--kepco-blue);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      line-height: 1;
+    }
+    .res-summary-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 0;
+      line-height: 1.2;
+    }
+    .res-summary-value {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.28;
+      word-break: break-word;
+    }
+    .res-summary-value.is-empty {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    .res-summary-slot {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #e8f4fc 0%, #dbeafe 100%);
+      border: 1px solid #bfdbfe;
+    }
+    .res-summary-slot-title {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: var(--kepco-blue);
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+      line-height: 1.2;
+    }
+    .res-summary-slot-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #1e3a5f;
+      line-height: 1.3;
+    }
+    .res-summary-slot-line #sumSlotText {
+      flex: 1;
+      min-width: 0;
+      word-break: break-word;
+    }
+    .res-summary-slot-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      flex-shrink: 0;
+    }
+    .res-summary-slot-line.is-pending .res-summary-slot-dot {
+      background: #f59e0b;
+    }
+    @media (max-width: 991.98px) {
+      .res-summary-aside {
+        position: static;
+        margin-top: 8px;
+        top: auto !important;
+      }
+      .res-summary-aside.is-stuck .res-summary-card {
+        box-shadow: 0 4px 18px rgba(0, 71, 149, 0.08);
+      }
+    }
+    .card { border: none; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,71,149,0.08); overflow: hidden; }
+    .card-header { background: #f8f9fa; border-bottom: 1px solid #eee; padding: 18px; font-weight: 700; color: #555; }
+    
+    .form-label { font-weight: 700; color: #444; margin-bottom: 8px; font-size: 0.95rem; }
+    .btn-primary { background-color: var(--kepco-blue); border: none; padding: 16px; font-weight: 700; font-size: 1.15rem; border-radius: 12px; transition: 0.3s; }
+    .btn-primary:hover { background-color: #003366; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,71,149,0.2); }
+    
+    /* 로딩 오버레이 */
+    .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); z-index: 2000; justify-content: center; align-items: center; flex-direction: column; }
+    .loader-progress-area { width: min(340px, 88vw); margin-top: 14px; text-align: left; }
+    .loader-progress-area .progress { border-radius: 999px; overflow: hidden; background: #e2e8f0; }
+    .loader-progress-area .progress-bar { background-color: var(--kepco-blue); transition: width 0.12s ease-out; }
+    
+    .safety-box { background-color: #fff9f0; border: 1px solid #ffeeba; border-radius: 10px; padding: 20px; }
+
+    /* 인라인 달력: 처음부터 표시, KEPCO 톤 */
+    .calendar-wrap { background: #fff; border-radius: 16px; padding: 0; box-shadow: 0 4px 20px rgba(0,71,149,0.08); border: 1px solid #e2e8f0; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+    .calendar-wrap .cal-header { background: var(--kepco-blue); color: #fff; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .calendar-wrap .cal-title { font-weight: 700; font-size: 1.05rem; }
+    .calendar-wrap .cal-nav { display: flex; gap: 8px; }
+    .calendar-wrap .cal-nav-btn { background: rgba(255,255,255,0.2); border: none; color: #fff; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 1rem; line-height: 1; transition: 0.2s; }
+    .calendar-wrap .cal-nav-btn:hover { background: rgba(255,255,255,0.35); }
+    .calendar-wrap .cal-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .calendar-wrap .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 10px 12px 4px; background: #f8f9fa; font-size: 0.75rem; font-weight: 700; color: #555; text-align: center; flex-shrink: 0; }
+    .calendar-wrap .cal-weekdays span:nth-child(1) { color: #e74c3c; }
+    .calendar-wrap .cal-weekdays span:nth-child(7) { color: #3498db; }
+    .calendar-wrap .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 8px 12px 16px; flex: 1 1 auto; min-height: 0; align-content: start; }
+    .calendar-wrap .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 600; color: #333; border-radius: 10px; cursor: pointer; transition: 0.2s; }
+    .calendar-wrap .cal-day.other-month { color: #bbb; }
+    .calendar-wrap .cal-day.today { background: rgba(0,71,149,0.1); color: var(--kepco-blue); }
+    .calendar-wrap .cal-day:hover:not(.other-month):not(.disabled) { background: rgba(0,71,149,0.12); color: var(--kepco-blue); }
+    .calendar-wrap .cal-day.selected { background: var(--kepco-blue); color: #fff; }
+    .calendar-wrap .cal-day.disabled { color: #ccc; cursor: not-allowed; }
+    .calendar-wrap .cal-day.sun { color: #e74c3c; }
+    .calendar-wrap .cal-day.sun.other-month { color: #e8b4b4; }
+    .calendar-wrap .cal-day.sat { color: #3498db; }
+    .calendar-wrap .cal-day.sat.other-month { color: #b4d4e8; }
+
+    /* 시간 선택 카드: KEPCO 블루 톤으로 통일 */
+    .time-select-card { background: #f0f4fa; border-radius: 16px; padding: 20px; margin-bottom: 0; box-shadow: 0 2px 12px rgba(0,71,149,0.06); border: 1px solid #dde4ef; display: flex; flex-direction: column; min-height: 0; }
+    .time-select-card .time-select-title { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--kepco-blue); font-size: 1rem; margin-bottom: 4px; flex-shrink: 0; }
+    .time-select-card .time-select-title .clock-icon { color: var(--kepco-blue); font-size: 1.1rem; }
+    .time-select-card .time-select-date { color: #555; font-size: 0.85rem; margin-bottom: 12px; min-height: 1.2em; flex-shrink: 0; }
+    /* 예약 가능 슬롯 12개·4열 = 3행 기준 여유 높이 + 달력 열과 stretch로 맞춤 */
+    .time-slots-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; flex: 1 1 auto; min-height: 168px; align-content: start; }
+    .time-select-placeholder { color: #6c757d; font-size: 0.9rem; padding: 12px 0; text-align: center; grid-column: 1 / -1; }
+    .time-select-loading { color: #6c757d; font-size: 0.9rem; text-align: center; grid-column: 1 / -1; white-space: nowrap; }
+    .time-slot-btn { background: #e2e8f2; color: #333; border: 1px solid #d0d8e4; border-radius: 12px; padding: 10px 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; min-height: 44px; display: flex; align-items: center; justify-content: center; text-align: center; }
+    .time-slot-btn:hover { background: #c9d4e6; border-color: var(--kepco-blue); color: var(--kepco-blue); }
+    .time-slot-btn.selected { background: var(--kepco-blue); color: #fff; border-color: var(--kepco-blue); }
+    .time-slot-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    @media (max-width: 576px) {
+      .time-slots-grid { grid-template-columns: repeat(3, 1fr); min-height: 220px; }
+    }
+
+    /* 환입 품목 선택 UI */
+    .material-select-wrap { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; }
+    .material-group { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; }
+    .material-group + .material-group { margin-top: 12px; }
+    .material-group-title { display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: var(--kepco-blue); margin-bottom: 10px; }
+    .material-unit-badge { font-size: 0.78rem; background: #e8f1fb; color: var(--kepco-blue); padding: 3px 8px; border-radius: 999px; border: 1px solid #cfe0f5; }
+    .material-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+    .material-item { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; background: #fdfefe; }
+    .material-item-head { display: flex; align-items: flex-start; gap: 10px; }
+    .material-item-head .form-check-input {
+      margin-top: 0.32rem;
+      margin-left: 0;
+      float: none;
+      flex-shrink: 0;
+      width: 1.1em;
+      height: 1.1em;
+    }
+    .material-item-head .form-check-label {
+      flex: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      margin-bottom: 0;
+      padding-left: 0;
+    }
+    .material-item .item-name { font-weight: 600; color: #333; }
+    .material-item .item-unit { font-size: 0.8rem; color: #6c757d; white-space: nowrap; }
+    .material-qty-wrap { display: none; margin-top: 8px; padding-left: calc(1.1em + 10px); }
+    .material-item.is-checked .material-qty-wrap { display: block; }
+    .material-qty-wrap .input-group-text { font-size: 0.8rem; min-width: 2.5rem; justify-content: center; }
+    .material-guide { color: #6b7280; font-size: 0.85rem; margin-top: 10px; margin-bottom: 0; }
+    @media (max-width: 768px) { .material-items { grid-template-columns: 1fr; } }
+
+    /* 차량 대수·차량번호·자재 종류 (환입 품목 상단) */
+    .booking-preface-card {
+      background: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 14px;
+      padding: 18px 20px 20px;
+      border: 1px solid #e8edf4;
+    }
+    .booking-preface-divider {
+      border: 0;
+      border-top: 1px solid #e2e8f0;
+      margin: 1.1rem 0;
+      opacity: 1;
+    }
+    .booking-preface-block .form-label {
+      margin-bottom: 0.25rem;
+    }
+    .booking-preface-card .preface-mode-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .booking-preface-card .preface-mode-row .btn {
+      flex: 1;
+      min-width: 100px;
+      border-radius: 10px;
+      font-weight: 600;
+      padding: 10px 16px;
+    }
+    .booking-preface-card .preface-material-kind .btn {
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      line-height: 1.35;
+      white-space: normal;
+    }
+    .booking-preface-card .btn-check:checked + .btn-outline-primary,
+    .booking-preface-card .btn-check:checked + .btn-outline-secondary {
+      background: var(--kepco-blue);
+      border-color: var(--kepco-blue);
+      color: #fff;
+    }
+    .booking-preface-card .preface-material-kind .material-kind-requires-two-vehicles.is-disabled {
+      opacity: 0.48;
+      pointer-events: none;
+    }
+    .booking-preface-card .preface-material-kind .material-kind-requires-two-vehicles.is-disabled label.btn {
+      cursor: not-allowed;
+    }
+    .booking-preface-card .material-kind-row-with-side {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    @media (min-width: 768px) {
+      .booking-preface-card .material-kind-row-with-side {
+        flex-direction: row;
+        align-items: stretch;
+        gap: 12px;
+      }
+      /* 차량번호 행(col-md-6 두 칸)과 동일하게 좌·우 절반 비율 */
+      .booking-preface-card .material-kind-row-with-side .material-kind-main,
+      .booking-preface-card .material-kind-row-with-side .material-kind-side {
+        flex: 1 1 0;
+        min-width: 0;
+        width: auto;
+      }
+    }
+    .booking-preface-card .scale-only-load-ratio-box {
+      border: 1px solid #e8edf4;
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      height: 100%;
+    }
+    .booking-preface-card .scale-only-load-ratio-box .preface-mode-row .btn {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.85rem;
+      padding: 6px 10px;
+    }
+    .booking-preface-card .material-kind-side-notice-box {
+      border: 1px solid #fde68a;
+      background: #fffbeb;
+      border-radius: 10px;
+      padding: 10px 12px;
+      height: 100%;
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+
+    /* 차량 총중량 + 예약 소요 시간 (한 블록) */
+    .vehicle-duration-combo {
+      background: transparent;
+    }
+    .vehicle-duration-combo .combo-pane {
+      border: 1px solid #dde4ef;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0, 71, 149, 0.06);
+      background: #fff;
+      height: 100%;
+    }
+    .vehicle-duration-combo .combo-section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: 0.03em;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .vehicle-duration-combo .combo-section-label .combo-icon { font-size: 1rem; opacity: 0.85; }
+    .vehicle-duration-combo .tonnage-pane {
+      background: linear-gradient(165deg, #f0f4fa 0%, #e8eef6 100%);
+    }
+    .vehicle-duration-combo .tonnage-btn-group { display: flex; flex-direction: column; gap: 8px; }
+    .vehicle-duration-combo .tonnage-btn-group .btn { border-radius: 10px; font-weight: 600; padding: 10px 14px; text-align: center; }
+    .vehicle-duration-combo .combo-duration-inner { padding-top: 14px !important; padding-bottom: 14px !important; }
+    .vehicle-duration-combo .combo-duration-inner .mode-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .vehicle-duration-combo .combo-duration-inner .mode-row .btn { border-radius: 10px; font-weight: 600; padding: 8px 16px; flex: 1; min-width: 120px; }
+    .vehicle-duration-combo .btn-check:checked + .btn-outline-primary { background: var(--kepco-blue); border-color: var(--kepco-blue); color: #fff; }
+    .vehicle-duration-combo .btn-check:checked + .btn-outline-secondary { background: #475569; border-color: #475569; color: #fff; }
+    .duration-recap strong { font-size: 1.05rem; color: var(--kepco-blue); display: block; line-height: 1.3; }
+    .duration-recap .badge { font-weight: 600; font-size: 0.75rem; }
+    .vehicle-duration-combo .combo-hint { font-size: 0.8rem; color: #64748b; margin-top: 10px; margin-bottom: 0; line-height: 1.4; }
+
+    /* 지사·업체 행은 기본 정렬 */
+    .row.date-time-row { align-items: flex-start; }
+    /* 방문 예약일·시간 블록 안: 달력 열과 시간 카드 열 상단 정렬 + 동일 높이 */
+    #dateTimeSection > .row {
+      align-items: stretch;
+    }
+    #dateTimeSection > .row > .col-md-5 {
+      display: flex;
+      flex-direction: column;
+    }
+    #dateTimeSection > .row > .col-md-7 {
+      display: flex;
+      flex-direction: column;
+    }
+    /* 달력·시간 카드: 같은 행에서 stretch + flex:1로 높이 맞춤 (슬롯 3행·달력 그리드 반영) */
+    @media (min-width: 768px) {
+      #dateTimeSection > .row > .col-md-5 .calendar-wrap {
+        flex: 1 1 auto;
+        width: 100%;
+      }
+      #dateTimeSection > .row > .col-md-7 .time-select-card {
+        flex: 1 1 auto;
+        width: 100%;
+      }
+    }
+    .time-select-below-slots { flex-shrink: 0; margin-top: auto; padding-top: 8px; }
+    .time-summer-notice {
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: rgba(0, 71, 149, 0.06);
+      border-radius: 8px;
+      border-left: 3px solid var(--kepco-blue);
+      color: #4a5568;
+      font-size: 0.8125rem;
+      line-height: 1.45;
+    }
+    
+    /* 성공 화면 스타일 */
+    #success-container { display: none; }
+    .success-icon { font-size: 5rem; color: #2ecc71; margin-bottom: 20px; }
+
+    @media (max-width: 768px) {
+      .system-name { font-size: 1rem; padding-left: 10px; margin-left: 10px; }
+      .kepco-logo { height: 25px; }
+    }
+
+    /* 관할 지사 · 업체: 일반 입력 필드와 동일 톤 (검색·드롭다운만 보조 스타일) */
+    .picker-input-wrap { position: relative; }
+    .picker-input-wrap .form-control { padding-right: 2.35rem; }
+    .picker-suffix-icon {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: #64748b;
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+    .picker-dropdown {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 8px 28px rgba(0, 71, 149, 0.12);
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 1060;
+      display: none;
+    }
+    .picker-dropdown.is-open { display: block; }
+    .picker-option {
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.9rem;
+      color: #334155;
+      transition: background 0.15s;
+    }
+    .picker-option:last-child { border-bottom: none; }
+    .picker-option:hover { background: #f8fafc; }
+    .picker-option.is-active { background: var(--kepco-blue); color: #fff; }
+    .picker-empty { padding: 14px; color: #94a3b8; font-size: 0.88rem; text-align: center; }
+    .company-result-row {
+      padding: 12px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .company-result-row:last-child { border-bottom: none; }
+    .company-result-row:hover { background: #f8fafc; }
+    .company-result-main .cr-name { font-weight: 700; font-size: 0.92rem; color: #1e293b; }
+    .company-result-main .cr-meta { font-size: 0.78rem; color: #64748b; margin-top: 3px; }
+    .company-result-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #64748b;
+      white-space: nowrap;
+      align-self: center;
+    }
+    .duration-only-card {
+      border: 1px solid #dde4ef;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0, 71, 149, 0.06);
+      background: #fff;
+      padding: 1rem 1.25rem 1.25rem;
+    }
+
+    /* 현장 안전수칙 이미지 모달 */
+    .safety-rules-modal-root {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 2100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .safety-rules-modal-root.is-open {
+      display: flex;
+    }
+    .safety-rules-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+    }
+    .safety-rules-modal-panel {
+      position: relative;
+      z-index: 1;
+      background: #fff;
+      border-radius: 16px;
+      max-width: 760px;
+      width: 100%;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+      overflow: hidden;
+    }
+    .safety-rules-modal-head {
+      flex-shrink: 0;
+      padding: 14px 18px;
+      border-bottom: 1px solid #e8eef4;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+    .safety-rules-modal-head h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--kepco-blue);
+    }
+    .safety-rules-modal-close {
+      border: none;
+      background: #e2e8f0;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
+      color: #475569;
+    }
+    .safety-rules-modal-close:hover {
+      background: #cbd5e1;
+    }
+    .safety-rules-modal-body {
+      overflow-y: auto;
+      padding: 16px 18px 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .safety-rules-modal-body .safety-rule-img-wrap {
+      margin-bottom: 14px;
+    }
+    .safety-rules-modal-body .safety-rule-img-wrap:last-of-type {
+      margin-bottom: 8px;
+    }
+    .safety-rules-modal-body img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+    .safety-rules-modal-body .safety-rule-caption {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .safety-rules-modal-check {
+      margin: 12px 0 4px;
+      padding: 12px 14px;
+      background: #fff9f0;
+      border: 1px solid #ffeeba;
+      border-radius: 10px;
+    }
+    .safety-rules-modal-footer {
+      flex-shrink: 0;
+      border-top: 1px solid #e8eef4;
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      background: #fafbfc;
+    }
+    #safetyRulesAck {
+      pointer-events: none;
+      cursor: default;
+    }
+    #safetyRulesAckLabel {
+      cursor: default;
+    }
+    .safety-rules-ack-pending {
+      font-size: 0.82rem;
+      color: #64748b;
+      font-weight: 600;
+    }
+    #dateTimeSection.is-locked {
+      opacity: 0.58;
+      pointer-events: none;
+      user-select: none;
+      position: relative;
+    }
+    #dateTimeSection.is-locked::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      cursor: not-allowed;
+    }
+
+    html { scroll-behavior: smooth; }
+    #form-section { scroll-margin-top: 88px; }
+
+  </style>
+</head>
+<body>
+
+  <div id="loader" class="loading-overlay">
+    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+    <div id="loaderMainMessage" class="fw-bold text-primary text-center px-3">예약 정보를 안전하게 처리 중입니다...</div>
+    <div id="loaderProgressArea" class="loader-progress-area" style="display: none;">
+      <div class="d-flex justify-content-between small text-muted mb-1 px-1">
+        <span id="loaderProgressLabel">업로드 준비 중</span>
+        <span id="loaderProgressPct" class="fw-semibold">0%</span>
+      </div>
+      <div class="progress" style="height: 10px;">
+        <div id="loaderProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+    </div>
+  </div>
+
+  <header class="top-header">
+    <div class="header-left">
+      <img src="https://lh3.googleusercontent.com/d/196cwAcdh72FSYj38Lj5g9mS2rSZ12vXQ" class="kepco-logo" alt="KEPCO">
+      <h1 class="system-name"><a href="index.html" class="system-name-link">자재센터 불용자재 환입차량 예약시스템</a></h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <a href="index.html" class="admin-link">🏠 메인 화면</a>
+      <button type="button" class="header-logout-btn" id="bookingHeaderLogoutBtn">로그아웃</button>
+    </div>
+  </header>
+
+  <div class="container booking-layout">
+    
+    <div id="form-section">
+      <div class="alert alert-primary border-0 shadow-sm mb-4 d-flex align-items-center">
+        <span class="me-2">💡</span>
+        <div>
+          <strong>안내:</strong> 현장 내 <strong>교통사고 예방 및 안전한 자재 하역 환경 조성</strong>을 위해 예약 시간을 엄수해 주세요. (타임당 최대 2대)
+        </div>
+      </div>
+
+      <div class="row g-3 g-lg-4 align-items-start booking-main-row">
+        <div class="col-lg-9">
+      <div class="card">
+        <div class="card-header text-center">방문 예약 신청서</div>
+        <div class="card-body p-4 p-md-5">
+          <form id="resForm">
+            <div class="row g-4 date-time-row">
+              <div class="col-12 d-none" id="loginMembershipBanner" role="status">
+                <div class="rounded-2 border bg-light px-3 py-2 small">
+                  <span class="text-muted">로그인 소속 업체</span>
+                  <strong id="loginMembershipCompanyNames" class="ms-1"></strong>
+                  <span id="loginMembershipExtraHint" class="text-muted d-block mt-1"></span>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="branchSearchInput">📍 관할 지사</label>
+                <input type="hidden" name="branch_id" id="branchIdHidden" value="" required>
+                <div class="picker-input-wrap picker-field">
+                  <input type="text" class="form-control" id="branchSearchInput" autocomplete="off" placeholder="지사를 검색하여 선택하세요" aria-autocomplete="list" aria-expanded="false" aria-controls="branchDropdownList">
+                  <span class="picker-suffix-icon" aria-hidden="true">▾</span>
+                  <div class="picker-dropdown" id="branchDropdownList" role="listbox"></div>
+                </div>
+              </div>
+              <div class="col-md-6" id="companyPane">
+                <label class="form-label" for="companySearchInput">🏢 업체</label>
+                <input type="hidden" name="company" id="companyNameHidden" value="" required>
+                <input type="hidden" name="company_id" id="companyIdHidden" value="">
+                <div class="picker-input-wrap picker-field">
+                  <input type="text" class="form-control" id="companySearchInput" autocomplete="off" placeholder="먼저 관할 지사를 선택하세요" disabled aria-autocomplete="list" aria-expanded="false" aria-controls="companyDropdownList">
+                  <span class="picker-suffix-icon" aria-hidden="true">🔍</span>
+                  <div class="picker-dropdown" id="companyDropdownList" role="listbox"></div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">📞 실 방문자 연락처</label>
+                <input type="tel" name="contact" id="contactInput" class="form-control" placeholder="010-0000-0000" maxlength="13" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">✉️ 이메일 주소</label>
+                <input type="email" name="visitor_email" id="visitorEmailInput" class="form-control" placeholder="example@company.com" required>
+                <p class="text-muted small mb-0 mt-1">작성하신 이메일로 예약 확정 결과가 안내됩니다.</p>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">👥 출입 인원 정보</label>
+                <input type="text" name="people" class="form-control" placeholder="예: 김한전, 이안전" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">⚖️ 차량 중량</label>
+                <div class="input-group">
+                  <input type="number" class="form-control" id="vehicleTonnageInput" min="0" step="0.1" inputmode="decimal" placeholder="예: 4.5">
+                  <span class="input-group-text">톤</span>
+                </div>
+                <p class="text-muted small mb-0 mt-1">4.5톤 초과 시 권장 예약 소요 시간이 60분으로 안내됩니다.</p>
+              </div>
+
+              <div class="col-12">
+                <div class="booking-preface-card">
+                  <div class="booking-preface-block">
+                    <label class="form-label mb-1">🚚 차량 대수</label>
+                    <p class="small text-muted mb-2">환입 차량이 1대인지 2대인지 선택해 주세요.</p>
+                    <div class="preface-mode-row" role="radiogroup" aria-label="차량 대수">
+                      <input type="radio" class="btn-check" name="vehicleCount" id="vehicleCountRadio1" value="1" checked autocomplete="off">
+                      <label class="btn btn-outline-primary" for="vehicleCountRadio1">1대</label>
+                      <input type="radio" class="btn-check" name="vehicleCount" id="vehicleCountRadio2" value="2" autocomplete="off">
+                      <label class="btn btn-outline-primary" for="vehicleCountRadio2">2대</label>
+                    </div>
+                  </div>
+                  <hr class="booking-preface-divider">
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label">🚛 차량번호 1</label>
+                      <input type="text" name="car1" class="form-control" placeholder="예: 12가 3456" required>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">🚛 차량번호 2</label>
+                      <input type="text" name="car2" id="car2Input" class="form-control">
+                    </div>
+                  </div>
+                  <hr class="booking-preface-divider">
+                  <div class="booking-preface-block mb-0">
+                    <label class="form-label mb-1">📋 자재 종류 구분</label>
+                    <!-- <p class="small text-muted mb-2">3번 항목은 차량 대수를 <strong>2대</strong>로 선택한 경우에만 선택할 수 있습니다.</p> -->
+                    <div class="preface-material-kind d-flex flex-column gap-2" role="radiogroup" aria-label="자재 종류 구분">
+                      <div class="material-kind-row-with-side">
+                        <div class="material-kind-main">
+                          <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleOnly" value="scale_only" autocomplete="off">
+                          <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleOnly">1. 계근대 품목만</label>
+                        </div>
+                        <div id="scaleOnlyLoadRatioWrap" class="material-kind-side d-none" aria-live="polite">
+                          <div class="scale-only-load-ratio-box">
+                            <!-- <div class="fw-semibold small mb-1">적재량 · 차량 50%</div> -->
+                            <p class="text-muted small mb-2 mb-md-2" style="font-size: 0.78rem; line-height: 1.35;">적재량이 <strong>차량 중량</strong>을 기준으로 <strong>50%</strong>를 초과하나요?</p>
+                            <div class="preface-mode-row" role="radiogroup" aria-label="적재량 50% 초과 여부">
+                              <input type="radio" class="btn-check" name="scaleOnlyLoadOver50" id="scaleOnlyLoadOver" value="yes" autocomplete="off">
+                              <label class="btn btn-outline-secondary btn-sm" for="scaleOnlyLoadOver">예 (초과)</label>
+                              <input type="radio" class="btn-check" name="scaleOnlyLoadOver50" id="scaleOnlyLoadNotOver" value="no" autocomplete="off">
+                              <label class="btn btn-outline-secondary btn-sm" for="scaleOnlyLoadNotOver">아니오</label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleTransformer" value="scale_plus_transformer" autocomplete="off">
+                        <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleTransformer">2. 계근대 품목 + 변압기류</label>
+                      </div>
+                      <div class="material-kind-row-with-side">
+                        <div class="material-kind-main">
+                          <div class="material-kind-requires-two-vehicles is-disabled" id="materialKindTwoVehicleOptionWrap" aria-live="polite">
+                            <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleTwoLoad" value="scale_two_loads_one_vehicle" autocomplete="off" disabled>
+                            <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleTwoLoad">3. 계근대 품목만(차량 2대)</label>
+                          </div>
+                        </div>
+                        <div id="materialKindThreeSideNotice" class="material-kind-side d-none" role="status" aria-live="polite">
+                          <div class="material-kind-side-notice-box">
+                            계근대 품목만 2대일 경우 변압기류 차량은 별도 예약이 필요합니다.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">📦 환입 품목 선택</label>
+                <div class="material-select-wrap">
+                  <div class="material-group">
+                    <div class="material-group-title">
+                      <span>계근대 품목</span>
+                      <span class="material-unit-badge">단위: KG·EA</span>
+                    </div>
+                    <div class="material-items">
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="ACSR" id="material-acsr" data-unit="KG">
+                          <label class="form-check-label" for="material-acsr"><span class="item-name">ACSR(970002)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="ACSR 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="ACSR-OC" id="material-acsr-oc" data-unit="KG">
+                          <label class="form-check-label" for="material-acsr-oc"><span class="item-name">ACSR-OC(970003)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="ACSR-OC 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="AL합금" id="material-al-alloy" data-unit="KG">
+                      <label class="form-check-label" for="material-al-alloy"><span class="item-name">AL합금(970005)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="AL합금 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="고동" id="material-copper" data-unit="KG">
+                          <label class="form-check-label" for="material-copper"><span class="item-name">고동(970006)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="고동 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="피복고동" id="material-covered-copper" data-unit="KG">
+                          <label class="form-check-label" for="material-covered-copper"><span class="item-name">피복고동(970007)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="피복고동 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="탈피불능" id="material-non-strip" data-unit="KG">
+                          <label class="form-check-label" for="material-non-strip"><span class="item-name">탈피불능(970008)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="탈피불능 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="고철" id="material-scrap" data-unit="KG">
+                          <label class="form-check-label" for="material-scrap"><span class="item-name">고철(970009)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="고철 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="CNCE 케이블" id="material-cnce-cable" data-unit="KG">
+                          <label class="form-check-label" for="material-cnce-cable"><span class="item-name">CNCE 케이블(970043)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="CNCE 케이블 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="CNCV 60mm(970049)" id="material-cncv-60" data-unit="KG">
+                          <label class="form-check-label" for="material-cncv-60"><span class="item-name">CNCV 60mm(970049)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="CNCV 60mm(970049) 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="CNCV 200mm(970050)" id="material-cncv-200" data-unit="KG">
+                          <label class="form-check-label" for="material-cncv-200"><span class="item-name">CNCV 200mm(970050)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="CNCV 200mm(970050) 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="CNCV 325mm(970051)" id="material-cncv-325" data-unit="KG">
+                          <label class="form-check-label" for="material-cncv-325"><span class="item-name">CNCV 325mm(970051)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="CNCV 325mm(970051) 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="CNCV 600mm(970052)" id="material-cncv-600" data-unit="KG">
+                          <label class="form-check-label" for="material-cncv-600"><span class="item-name">CNCV 600mm(970052)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="CNCV 600mm(970052) 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="폐전력량계(970010)" id="material-scrap-wattmeter" data-unit="KG">
+                          <label class="form-check-label" for="material-scrap-wattmeter"><span class="item-name">폐전력량계(970010)</span><span class="item-unit">KG</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="any" inputmode="decimal" placeholder="무게" disabled aria-label="폐전력량계 무게(KG)"><span class="input-group-text">KG</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="폐변류기(970054)" id="material-waste-rectifier" data-unit="EA">
+                          <label class="form-check-label" for="material-waste-rectifier"><span class="item-name">폐변류기(970054)</span><span class="item-unit">EA</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="1" inputmode="numeric" placeholder="수량" disabled aria-label="폐변류기 수량(EA)"><span class="input-group-text">EA</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="일반형 접촉기(970055)" id="material-contactor-general" data-unit="EA">
+                          <label class="form-check-label" for="material-contactor-general"><span class="item-name">일반형 접촉기(970055)</span><span class="item-unit">EA</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="1" inputmode="numeric" placeholder="수량" disabled aria-label="일반형 접촉기 수량(EA)"><span class="input-group-text">EA</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="래치형 접촉기(970056)" id="material-contactor-latch" data-unit="EA">
+                          <label class="form-check-label" for="material-contactor-latch"><span class="item-name">래치형 접촉기(970056)</span><span class="item-unit">EA</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="1" inputmode="numeric" placeholder="수량" disabled aria-label="래치형 접촉기 수량(EA)"><span class="input-group-text">EA</span></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="material-group">
+                    <div class="material-group-title">
+                      <span>계근대 외 품목</span>
+                      <span class="material-unit-badge">단위: EA</span>
+                    </div>
+                    <div class="material-items">
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="변압기" id="material-transformer" data-unit="EA">
+                          <label class="form-check-label" for="material-transformer"><span class="item-name">변압기</span><span class="item-unit">EA</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="1" inputmode="numeric" placeholder="수량" disabled aria-label="변압기 수량(EA)"><span class="input-group-text">EA</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="개폐기" id="material-switchgear" data-unit="EA">
+                          <label class="form-check-label" for="material-switchgear"><span class="item-name">개폐기</span><span class="item-unit">EA</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="1" inputmode="numeric" placeholder="수량" disabled aria-label="개폐기 수량(EA)"><span class="input-group-text">EA</span></div></div>
+                      </div>
+                      <div class="material-item">
+                        <div class="material-item-head">
+                          <input class="form-check-input material-checkbox" type="checkbox" value="공리일" id="material-gongriil" data-unit="EA">
+                          <label class="form-check-label" for="material-gongriil"><span class="item-name">공리일</span><span class="item-unit">EA</span></label>
+                        </div>
+                        <div class="material-qty-wrap"><div class="input-group input-group-sm"><input type="number" class="form-control material-qty" min="1" step="1" inputmode="numeric" placeholder="수량" disabled aria-label="공리일 수량(EA)"><span class="input-group-text">EA</span></div></div>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="material-guide">품목을 선택하면 무게 및 수량을 입력할 수 있습니다. 선택한 품목·무게·수량이 자동으로 정리되어 제출됩니다. (최소 1개 품목)</p>
+                </div>
+                <input type="hidden" name="material" id="materialSummary" required>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">⏱ 예약 소요 시간</label>
+                <p class="small text-muted mb-2">차량 중량·차량 대수·환입 품목 수 등에 따라 권장 소요 시간이 정해집니다. 확인하신 뒤 아래에서 방문 예약일·시간을 선택해 주세요.</p>
+                <div class="duration-only-card mt-1">
+                  <div class="combo-section-label mb-2"><span class="combo-icon">⏱</span> 소요 시간 선택</div>
+                  <div class="mode-row">
+                    <input type="radio" class="btn-check" name="durationMode" id="durationModeAuto" value="auto" checked autocomplete="off">
+                    <label class="btn btn-outline-primary" for="durationModeAuto">자동 (권장)</label>
+                    <input type="radio" class="btn-check" name="durationMode" id="durationModeManual" value="manual" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="durationModeManual">직접 선택</label>
+                  </div>
+                  <div id="durationAutoPanel" class="duration-recap mt-3">
+                    <strong id="durationRecValue">권장: 30분</strong>
+                    <div id="durationRecBadges" class="mt-2 d-flex flex-wrap gap-1"></div>
+                  </div>
+                  <div id="durationManualPanel" class="d-none mt-3">
+                    <div class="mode-row mb-0">
+                      <input type="radio" class="btn-check" name="durationManual" id="durationManual30" value="30" autocomplete="off">
+                      <label class="btn btn-outline-secondary" for="durationManual30">30분</label>
+                      <input type="radio" class="btn-check" name="durationManual" id="durationManual60" value="60" autocomplete="off">
+                      <label class="btn btn-outline-secondary" for="durationManual60">60분</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="dateTimeSection" class="col-12 is-locked">
+                <label class="form-label mb-2">📅 방문 예약일 · 시간</label>
+                <p class="small text-muted mb-3" id="dateTimeSectionLockHint">관할 지사와 업체를 선택하면 달력에서 예약일을 고를 수 있습니다. 예약 가능일은 오늘부터 7일 후까지(오늘 포함)입니다. 소요 시간을 확인한 뒤 일시를 선택하면 30분·60분 예약에 맞는 가능 시간이 표시됩니다.</p>
+                <div class="row g-4">
+                  <div class="col-md-5">
+                    <input type="hidden" id="date" name="date" required>
+                    <div id="inlineCalendar" class="calendar-wrap">
+                      <div class="cal-header">
+                        <span class="cal-title" id="calTitle">2026년 3월</span>
+                        <div class="cal-nav">
+                          <button type="button" class="cal-nav-btn" id="calPrev" aria-label="이전 달">‹</button>
+                          <button type="button" class="cal-nav-btn" id="calNext" aria-label="다음 달">›</button>
+                        </div>
+                      </div>
+                      <div class="cal-weekdays">
+                        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                      </div>
+                      <div class="cal-days" id="calDays"></div>
+                    </div>
+                  </div>
+                  <div class="col-md-7">
+                    <div id="time-select-wrap" class="time-select-card">
+                      <div class="time-select-title"><span class="clock-icon">🕐</span> 시간 선택</div>
+                      <div class="time-select-date" id="timeSelectDate">먼저 관할 지사와 업체를 선택해 주세요</div>
+                      <div class="time-slots-grid" id="timeSlots">
+                        <span class="time-select-placeholder col-12">← 달력에서 예약일을 선택하면 시간 선택이 가능합니다.</span>
+                      </div>
+                      <div class="time-select-below-slots">
+                        <p class="text-muted small mb-0" id="timeSelectHint"></p>
+                        <p class="time-summer-notice mb-0 d-none" id="timeSummerNotice" role="note">하절기(7월 1일~8월 31일)에는 13:00~14:00 구간은 예약할 수 없습니다.</p>
+                      </div>
+                    </div>
+                    <input type="hidden" id="time" name="time" required>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12"><hr class="my-3"></div>
+
+              <div class="col-12">
+                <h6 class="fw-bold mb-3">🛡️ 안전 관련 필수 서류 첨부 (2종 모두 필수)</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="small text-muted mb-1">위험성 체크리스트</label>
+                    <input type="file" id="f1" class="form-control" required accept=".pdf,image/*">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="small text-muted mb-1">안전 교육 일지</label>
+                    <input type="file" id="f2" class="form-control" required accept=".pdf,image/*">
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 mt-3">
+                <div class="safety-box">
+                  <h6 class="fw-bold mb-2">📋 작업 전 안전수칙</h6>
+                  <p class="small text-muted mb-2 mb-md-3">아래 버튼으로 작업 전 안전수칙을 확인한 뒤, 동의란에 체크해주세요.</p>
+                  <button type="button" class="btn btn-outline-primary btn-sm mb-3" id="openSafetyRulesModal" aria-haspopup="dialog">
+                    작업 전 안전수칙
+                  </button>
+                  <div class="form-check d-flex align-items-start gap-2">
+                    <input class="form-check-input flex-shrink-0 mt-1" type="checkbox" id="safetyRulesAck" tabindex="-1" title="모달에서 확인 완료 시 자동으로 체크됩니다">
+                    <div>
+                      <label class="form-check-label fw-bold text-danger" id="safetyRulesAckLabel" for="safetyRulesAck">
+                        본인은 작업 전 안전수칙을 확인하였으며, 작업 시 이를 준수하겠습니다.
+                      </label>
+                      <div class="safety-rules-ack-pending mt-1" id="safetyRulesAckHint">모달에서 이미지 확인 후 「확인 완료」를 누르면 여기에 체크됩니다.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <button type="button" id="submitBtn" onclick="handleFormSubmit()" class="btn btn-primary w-100 mt-2 shadow-sm">
+                  예약 신청 완료하기
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+        </div>
+
+        <aside class="col-lg-3 res-summary-aside" aria-label="예약 신청 요약">
+          <div class="res-summary-card shadow-sm">
+            <div class="res-summary-head">예약 신청 요약</div>
+            <div class="res-summary-body">
+              <div class="res-summary-row">
+                <div class="res-summary-icon" aria-hidden="true">📍</div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="res-summary-label">관할 지사</div>
+                  <div class="res-summary-value is-empty" id="sumBranch">—</div>
+                </div>
+              </div>
+              <div class="res-summary-row">
+                <div class="res-summary-icon" aria-hidden="true">🏢</div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="res-summary-label">업체</div>
+                  <div class="res-summary-value is-empty" id="sumCompany">—</div>
+                </div>
+              </div>
+              <div class="res-summary-row">
+                <div class="res-summary-icon" aria-hidden="true">📅</div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="res-summary-label">방문 예약일</div>
+                  <div class="res-summary-value is-empty" id="sumVisitDate">선택 전</div>
+                </div>
+              </div>
+              <div class="res-summary-row">
+                <div class="res-summary-icon" aria-hidden="true">📞</div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="res-summary-label">실 방문자 연락처</div>
+                  <div class="res-summary-value is-empty" id="sumContact">—</div>
+                </div>
+              </div>
+              <div class="res-summary-row">
+                <div class="res-summary-icon" aria-hidden="true">✉️</div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="res-summary-label">이메일</div>
+                  <div class="res-summary-value is-empty" id="sumEmail">—</div>
+                </div>
+              </div>
+              <div class="res-summary-row">
+                <div class="res-summary-icon" aria-hidden="true">👥</div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="res-summary-label">출입 인원</div>
+                  <div class="res-summary-value is-empty" id="sumPeople">—</div>
+                </div>
+              </div>
+              <div class="res-summary-row">
+                <div class="res-summary-icon" aria-hidden="true">⚖️</div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="res-summary-label">차량 중량</div>
+                  <div class="res-summary-value is-empty" id="sumTonnage">—</div>
+                </div>
+              </div>
+              <div class="res-summary-row">
+                <div class="res-summary-icon" aria-hidden="true">🚛</div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="res-summary-label">차량번호</div>
+                  <div class="res-summary-value is-empty" id="sumCars">—</div>
+                </div>
+              </div>
+              <div class="res-summary-row">
+                <div class="res-summary-icon" aria-hidden="true">🚚</div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="res-summary-label">차량 대수</div>
+                  <div class="res-summary-value is-empty" id="sumVehicleCount">—</div>
+                </div>
+              </div>
+              <div class="res-summary-row">
+                <div class="res-summary-icon" aria-hidden="true">📋</div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="res-summary-label">자재 종류 구분</div>
+                  <div class="res-summary-value is-empty" id="sumMaterialKind">—</div>
+                </div>
+              </div>
+              <div class="res-summary-row">
+                <div class="res-summary-icon" aria-hidden="true">📦</div>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="res-summary-label">환입 품목</div>
+                  <div class="res-summary-value is-empty" id="sumMaterials" title="">—</div>
+                </div>
+              </div>
+              <div class="res-summary-slot">
+                <div class="res-summary-slot-title">예약 시간 · 소요</div>
+                <div class="res-summary-slot-line is-pending" id="sumSlotLine">
+                  <span class="res-summary-slot-dot" aria-hidden="true"></span>
+                  <span id="sumSlotText">날짜를 먼저 선택하세요</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div id="success-section" class="text-center" style="display: none;">
+      <div class="card p-5">
+        <div class="success-icon">✅</div>
+        <h2 class="fw-bold text-primary mb-3">예약 신청이 접수되었습니다!</h2>
+        <p class="text-muted mb-4 fs-5">
+          입력하신 이메일로 담당자의 검토 결과(승인/반려)가 안내될 예정입니다.<br>
+          안전한 작업을 위해 배정된 예약 시간을 반드시 지켜 주시기 바랍니다.
+        </p>
+        <button type="button" onclick="location.reload()" class="btn btn-primary px-5">
+          새로운 예약 신청하기
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="safetyRulesModal" class="safety-rules-modal-root" role="dialog" aria-modal="true" aria-labelledby="safetyRulesModalTitle" aria-hidden="true">
+    <div class="safety-rules-modal-backdrop" data-safety-modal-dismiss="1" tabindex="-1"></div>
+    <div class="safety-rules-modal-panel">
+      <div class="safety-rules-modal-head">
+        <h2 id="safetyRulesModalTitle">작업 전 안전수칙</h2>
+        <button type="button" class="safety-rules-modal-close" id="safetyRulesModalCloseBtn" aria-label="닫기">×</button>
+      </div>
+      <div class="safety-rules-modal-body">
+        <div class="safety-rule-img-wrap">
+          <div class="safety-rule-caption">안전수칙 1</div>
+          <img src="assets/safety-rule-1.png" alt="현장 안전수칙 안내 이미지 1">
+        </div>
+        <div class="safety-rule-img-wrap">
+          <div class="safety-rule-caption">안전수칙 2</div>
+          <img src="assets/safety-rule-2.png" alt="현장 안전수칙 안내 이미지 2">
+        </div>
+        <div class="safety-rules-modal-check">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="safetyRulesModalInnerCheck">
+            <label class="form-check-label fw-bold text-danger" for="safetyRulesModalInnerCheck">
+              위 안전수칙 이미지를 모두 확인하였으며, 작업 시 이를 준수하겠습니다.
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="safety-rules-modal-footer">
+        <button type="button" class="btn btn-outline-secondary" id="safetyRulesModalDismissBtn">닫기</button>
+        <button type="button" class="btn btn-primary" id="safetyRulesModalConfirmBtn">확인 완료</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script>
+    (function () {
+    const loader = document.getElementById('loader');
+
+    function setLoaderMainMessage(text) {
+      var el = document.getElementById('loaderMainMessage');
+      if (el) el.textContent = text;
+    }
+
+    function resetLoaderProgressWidgets() {
+      var area = document.getElementById('loaderProgressArea');
+      if (area) area.style.display = 'none';
+      var bar = document.getElementById('loaderProgressBar');
+      if (bar) bar.style.width = '0%';
+      var pct = document.getElementById('loaderProgressPct');
+      if (pct) pct.textContent = '0%';
+      var lbl = document.getElementById('loaderProgressLabel');
+      if (lbl) lbl.textContent = '';
+    }
+
+    function hideBookingLoader() {
+      loader.style.display = 'none';
+      resetLoaderProgressWidgets();
+      setLoaderMainMessage('예약 정보를 안전하게 처리 중입니다...');
+    }
+
+    var sbClient = null;
+    function getSupabase() {
+      if (!sbClient) {
+        if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
+          throw new Error('config.js를 확인해 주세요. SUPABASE_URL, SUPABASE_ANON_KEY가 필요합니다.');
+        }
+        sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+      return sbClient;
+    }
+
+    /** 비로그인 시 예약 페이지 접근 차단 */
+    async function ensureBookingAuthOrRedirect() {
+      try {
+        var sb = getSupabase();
+        var res = await sb.auth.getSession();
+        var session = res && res.data && res.data.session;
+        if (!session) {
+          alert('예약 신청은 로그인 후 이용할 수 있습니다.');
+          window.location.replace(new URL('login.html', window.location.href).href);
+          return false;
+        }
+        return true;
+      } catch (e) {
+        console.warn(e);
+        alert('로그인 확인 중 오류가 발생했습니다. 로그인 페이지로 이동합니다.');
+        window.location.replace(new URL('login.html', window.location.href).href);
+        return false;
+      }
+    }
+
+    (function bindBookingHeaderLogout() {
+      var btn = document.getElementById('bookingHeaderLogoutBtn');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        try {
+          var sb = getSupabase();
+          btn.disabled = true;
+          sb.auth.signOut().then(function () {
+            window.location.replace(new URL('index.html', window.location.href).href);
+          }).catch(function (e) {
+            console.warn(e);
+            alert('로그아웃 처리 중 오류가 발생했습니다.');
+            btn.disabled = false;
+          });
+        } catch (e) {
+          console.warn(e);
+          alert('로그아웃을 진행할 수 없습니다. config.js 설정을 확인해 주세요.');
+          btn.disabled = false;
+        }
+      });
+    })();
+
+    var masterBranches = [];
+    var masterCompanies = [];
+    var masterBranchWeekdays = {};
+    /** branch_id 문자열 → { 'YYYY-MM-DD': true } 환입 불가일 (구 지사별) */
+    var masterBranchBlockedYmd = {};
+    /** 'YYYY-MM-DD': true — 전 지사 공통 환입 불가일 */
+    var masterGlobalBlockedYmd = {};
+    var selectedBranchId = null;
+    var selectedBranchName = '';
+    var selectedCompanyId = null;
+    var selectedCompanyName = '';
+    /** 로그인 멤버십이 있을 때만 지정: 예약 가능한 지사·업체 id 집합 (목록 필터) */
+    var loggedInAllowedBranchIds = null;
+    var loggedInAllowedCompanyIds = null;
+    /** 멤버십 행 { company_id, name, branch_id } — 지사 선택 시 업체 자동 채움에 사용 */
+    var loggedInMembershipRows = [];
+
+    function escapeHtmlPicker(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    }
+
+    function closeAllPickerDropdowns() {
+      document.querySelectorAll('.picker-dropdown.is-open').forEach(function (el) {
+        el.classList.remove('is-open');
+      });
+      var bs = document.getElementById('branchSearchInput');
+      var cs = document.getElementById('companySearchInput');
+      if (bs) bs.setAttribute('aria-expanded', 'false');
+      if (cs) cs.setAttribute('aria-expanded', 'false');
+    }
+
+    function hasLoginCompanyMembership() {
+      return loggedInMembershipRows && loggedInMembershipRows.length > 0;
+    }
+
+    /** 로그인 소속 업체명을 지사 선택 전에도 칸에 표시 (복수 지사 시 company_id 는 지사 선택 후 확정) */
+    function fillLoggedInCompanyDisplayFromRows(rows) {
+      var inp = document.getElementById('companySearchInput');
+      var cn = document.getElementById('companyNameHidden');
+      if (!inp || !rows || !rows.length) return;
+      var names = [];
+      var seenN = {};
+      rows.forEach(function (r) {
+        var n = (r.name || '').trim();
+        if (n && !seenN[n]) {
+          seenN[n] = true;
+          names.push(n);
+        }
+      });
+      var displayName = names.length === 1 ? names[0] : names.join(' · ');
+      selectedCompanyName = displayName;
+      inp.value = displayName;
+      if (cn) cn.value = displayName;
+
+      var ids = [];
+      var seenI = {};
+      rows.forEach(function (r) {
+        if (!seenI[r.company_id]) {
+          seenI[r.company_id] = true;
+          ids.push(r.company_id);
+        }
+      });
+      var ci = document.getElementById('companyIdHidden');
+      if (ids.length === 1) {
+        selectedCompanyId = ids[0];
+        if (ci) ci.value = String(ids[0]);
+      } else {
+        selectedCompanyId = null;
+        if (ci) ci.value = '';
+      }
+    }
+
+    /** 업체 칸: 로그인 소속 자동 값만 표시, 항상 disabled (제출은 hidden 필드 사용) */
+    function syncCompanyPaneState() {
+      var inp = document.getElementById('companySearchInput');
+      var pane = document.getElementById('companyPane');
+      if (!inp || !pane) return;
+
+      inp.disabled = true;
+      inp.readOnly = true;
+
+      var hasMem = hasLoginCompanyMembership();
+      if (!hasMem) {
+        inp.placeholder = '계정에 등록된 소속 업체가 없습니다. 관리자에게 문의하세요.';
+        pane.style.opacity = '0.85';
+        pane.style.pointerEvents = 'none';
+        return;
+      }
+
+      pane.style.opacity = '';
+      pane.style.pointerEvents = 'none';
+      if (!selectedBranchId) {
+        inp.placeholder = '관할 지사를 선택하면 예약 소속 업체가 확정됩니다';
+      } else {
+        var nMaster = masterCompanies.filter(function (c) {
+          if (Number(c.branch_id) !== Number(selectedBranchId)) return false;
+          if (loggedInAllowedCompanyIds && loggedInAllowedCompanyIds.size > 0) {
+            return loggedInAllowedCompanyIds.has(Number(c.id));
+          }
+          return true;
+        }).length;
+        inp.placeholder = nMaster
+          ? '소속 업체 자동 반영 (' + nMaster + '건)'
+          : '등록된 업체가 없습니다. 관리자에게 문의하세요.';
+      }
+    }
+
+    function clearCompanySelection() {
+      selectedCompanyId = null;
+      selectedCompanyName = '';
+      var cn = document.getElementById('companyNameHidden');
+      var ci = document.getElementById('companyIdHidden');
+      var inp = document.getElementById('companySearchInput');
+      if (cn) cn.value = '';
+      if (ci) ci.value = '';
+      if (inp) inp.value = '';
+      if (typeof updateReservationSummary === 'function') updateReservationSummary();
+    }
+
+    function selectBranch(id, name) {
+      selectedBranchId = id;
+      selectedBranchName = name;
+      var bh = document.getElementById('branchIdHidden');
+      var bi = document.getElementById('branchSearchInput');
+      if (bh) bh.value = String(id);
+      if (bi) bi.value = name;
+      closeAllPickerDropdowns();
+      if (hasLoginCompanyMembership()) {
+        selectedCompanyId = null;
+        var ciOnly = document.getElementById('companyIdHidden');
+        if (ciOnly) ciOnly.value = '';
+        if (typeof updateReservationSummary === 'function') updateReservationSummary();
+      } else {
+        clearCompanySelection();
+      }
+      clearDateAndTimeSelection();
+      applyLoggedInCompanyForBranch(id);
+      syncCompanyPaneState();
+    }
+
+    /** 로그인 소속: 선택한 지사에 맞는 업체를 업체 칸에 자동 반영 (1건이면 그대로, 복수면 마스터 sort_order 우선) */
+    function applyLoggedInCompanyForBranch(branchId) {
+      if (!loggedInMembershipRows || !loggedInMembershipRows.length) return;
+      var bid = Number(branchId);
+      var cand = loggedInMembershipRows.filter(function (r) { return Number(r.branch_id) === bid; });
+      if (!cand.length) return;
+      if (cand.length === 1) {
+        selectCompany(cand[0].company_id, cand[0].name);
+        return;
+      }
+      cand.sort(function (a, b) {
+        var ca = masterCompanies.find(function (c) { return Number(c.id) === a.company_id; });
+        var cb = masterCompanies.find(function (c) { return Number(c.id) === b.company_id; });
+        var sa = ca && ca.sort_order != null ? Number(ca.sort_order) : 1e9;
+        var sb = cb && cb.sort_order != null ? Number(cb.sort_order) : 1e9;
+        if (sa !== sb) return sa - sb;
+        return a.company_id - b.company_id;
+      });
+      selectCompany(cand[0].company_id, cand[0].name);
+    }
+
+    function selectCompany(id, name) {
+      selectedCompanyId = id;
+      selectedCompanyName = name;
+      var cn = document.getElementById('companyNameHidden');
+      var ci = document.getElementById('companyIdHidden');
+      var inp = document.getElementById('companySearchInput');
+      if (cn) cn.value = name;
+      if (ci) ci.value = String(id);
+      if (inp) inp.value = name;
+      closeAllPickerDropdowns();
+      syncDateTimeSectionLock();
+      renderCalendar();
+      if (typeof updateReservationSummary === 'function') updateReservationSummary();
+      syncCompanyPaneState();
+    }
+
+    function renderBranchDropdown() {
+      var box = document.getElementById('branchDropdownList');
+      var bi = document.getElementById('branchSearchInput');
+      if (!box || !bi) return;
+      var q = String(bi.value || '').trim().toLowerCase();
+      var list = masterBranches.filter(function (b) {
+        if (loggedInAllowedBranchIds && loggedInAllowedBranchIds.size > 0) {
+          if (!loggedInAllowedBranchIds.has(Number(b.id))) return false;
+        }
+        return !q || String(b.name || '').toLowerCase().indexOf(q) !== -1;
+      });
+      if (list.length === 0) {
+        box.innerHTML = '<div class="picker-empty">검색 결과가 없습니다</div>';
+        return;
+      }
+      box.innerHTML = list.map(function (b) {
+        var active = selectedBranchId != null && Number(selectedBranchId) === Number(b.id) ? ' is-active' : '';
+        return '<div class="picker-option' + active + '" role="option" data-id="' + b.id + '">' + escapeHtmlPicker(b.name) + '</div>';
+      }).join('');
+      box.querySelectorAll('.picker-option').forEach(function (el) {
+        el.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        el.addEventListener('click', function () {
+          var id = Number(el.dataset.id);
+          var b = masterBranches.find(function (x) { return Number(x.id) === id; });
+          if (b) selectBranch(id, b.name);
+        });
+      });
+    }
+
+    function renderCompanyDropdown() {
+      var box = document.getElementById('companyDropdownList');
+      var ci = document.getElementById('companySearchInput');
+      if (!box || !ci) return;
+      if (!selectedBranchId) {
+        box.innerHTML = '<div class="picker-empty">지사를 먼저 선택하세요</div>';
+        return;
+      }
+      var q = String(ci.value || '').trim().toLowerCase();
+      var qDigits = q.replace(/[^0-9]/g, '');
+      var list = masterCompanies.filter(function (c) {
+        if (Number(c.branch_id) !== Number(selectedBranchId)) return false;
+        if (loggedInAllowedCompanyIds && loggedInAllowedCompanyIds.size > 0) {
+          if (!loggedInAllowedCompanyIds.has(Number(c.id))) return false;
+        }
+        if (!q) return true;
+        var nm = String(c.name || '').toLowerCase();
+        var br = String(c.business_registration_no || '').replace(/\s/g, '').toLowerCase();
+        var brDigits = br.replace(/-/g, '');
+        return nm.indexOf(q) !== -1 || (qDigits.length >= 2 && brDigits.indexOf(qDigits) !== -1);
+      });
+      if (list.length === 0) {
+        box.innerHTML = '<div class="picker-empty">검색 결과가 없습니다</div>';
+        return;
+      }
+      var slice = list.slice(0, 100);
+      box.innerHTML = slice.map(function (c) {
+        var brRaw = c.business_registration_no && String(c.business_registration_no).trim();
+        var lic = brRaw ? '사업자등록번호 ' + escapeHtmlPicker(brRaw) : '사업자등록번호 미등록';
+        var badge = brRaw ? '등록' : '—';
+        return '<div class="company-result-row" role="option" data-id="' + c.id + '">' +
+          '<div class="company-result-main"><div class="cr-name">' + escapeHtmlPicker(c.name) + '</div><div class="cr-meta">' + lic + '</div></div>' +
+          '<span class="company-result-badge">' + badge + '</span></div>';
+      }).join('');
+      box.querySelectorAll('.company-result-row').forEach(function (el) {
+        el.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        el.addEventListener('click', function () {
+          var id = Number(el.dataset.id);
+          var row = masterCompanies.find(function (x) { return Number(x.id) === id; });
+          if (row) selectCompany(id, row.name);
+        });
+      });
+    }
+
+    function openBranchDropdown() {
+      var co = document.getElementById('companyDropdownList');
+      if (co) co.classList.remove('is-open');
+      renderBranchDropdown();
+      var d = document.getElementById('branchDropdownList');
+      var inp = document.getElementById('branchSearchInput');
+      if (d) d.classList.add('is-open');
+      if (inp) inp.setAttribute('aria-expanded', 'true');
+    }
+
+    function openCompanyDropdown() {
+      if (!selectedBranchId) return;
+      var br = document.getElementById('branchDropdownList');
+      if (br) br.classList.remove('is-open');
+      renderCompanyDropdown();
+      var d = document.getElementById('companyDropdownList');
+      var inp = document.getElementById('companySearchInput');
+      if (d) d.classList.add('is-open');
+      if (inp) inp.setAttribute('aria-expanded', 'true');
+    }
+
+    function bindBranchCompanyPickers() {
+      var bi = document.getElementById('branchSearchInput');
+      var ci = document.getElementById('companySearchInput');
+      var branchIdHidden = document.getElementById('branchIdHidden');
+      var companyNameHidden = document.getElementById('companyNameHidden');
+      var companyIdHidden = document.getElementById('companyIdHidden');
+      if (!bi || !ci || !branchIdHidden || !companyNameHidden || !companyIdHidden) return;
+
+      bi.addEventListener('focus', function () { openBranchDropdown(); });
+      bi.addEventListener('input', function () {
+        if (branchIdHidden.value && bi.value !== selectedBranchName) {
+          branchIdHidden.value = '';
+          selectedBranchId = null;
+          selectedBranchName = '';
+          clearCompanySelection();
+          if (hasLoginCompanyMembership()) {
+            fillLoggedInCompanyDisplayFromRows(loggedInMembershipRows);
+          }
+          syncCompanyPaneState();
+          clearDateAndTimeSelection();
+        }
+        openBranchDropdown();
+        if (typeof updateReservationSummary === 'function') updateReservationSummary();
+      });
+
+      ci.addEventListener('focus', function () {
+        if (!selectedBranchId) return;
+        openCompanyDropdown();
+      });
+      ci.addEventListener('input', function () {
+        if (companyNameHidden.value && ci.value !== selectedCompanyName) {
+          companyNameHidden.value = '';
+          companyIdHidden.value = '';
+          selectedCompanyId = null;
+          selectedCompanyName = '';
+          clearDateAndTimeSelection();
+        }
+        openCompanyDropdown();
+        if (typeof updateReservationSummary === 'function') updateReservationSummary();
+      });
+
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('.picker-field')) closeAllPickerDropdowns();
+      });
+      bi.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeAllPickerDropdowns();
+      });
+      ci.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeAllPickerDropdowns();
+      });
+
+      syncCompanyPaneState();
+    }
+
+    async function loadBranchCompanyMasters() {
+      try {
+        const sb = getSupabase();
+        const [r1, r2, r3, r4, r4g] = await Promise.all([
+          sb.from('branches').select('id,name,sort_order').eq('is_active', true).order('sort_order', { ascending: true }),
+          sb.from('companies').select('id,branch_id,name,business_registration_no,sort_order').eq('is_active', true).order('sort_order', { ascending: true }),
+          sb.from('branch_allowed_weekdays').select('branch_id,weekday'),
+          sb.from('branch_blocked_dates').select('branch_id,blocked_date'),
+          sb.from('global_blocked_dates').select('blocked_date')
+        ]);
+        if (r1.error) console.warn(r1.error);
+        if (r2.error) console.warn(r2.error);
+        if (r3.error) console.warn(r3.error);
+        if (r4.error) console.warn(r4.error);
+        if (r4g.error) console.warn(r4g.error);
+        masterBranches = r1.data || [];
+        masterCompanies = r2.data || [];
+        masterBranchWeekdays = {};
+        (r3.data || []).forEach(function (row) {
+          var bid = String(row.branch_id);
+          if (!masterBranchWeekdays[bid]) masterBranchWeekdays[bid] = [];
+          masterBranchWeekdays[bid].push(Number(row.weekday));
+        });
+        masterBranchBlockedYmd = {};
+        (r4.data || []).forEach(function (row) {
+          var bidB = String(row.branch_id);
+          var rawD = row.blocked_date;
+          var ymdB = rawD != null ? String(rawD).substring(0, 10) : '';
+          if (!ymdB) return;
+          if (!masterBranchBlockedYmd[bidB]) masterBranchBlockedYmd[bidB] = {};
+          masterBranchBlockedYmd[bidB][ymdB] = true;
+        });
+        masterGlobalBlockedYmd = {};
+        (r4g.data || []).forEach(function (row) {
+          var rawG = row.blocked_date;
+          var ymdG = rawG != null ? String(rawG).substring(0, 10) : '';
+          if (ymdG) masterGlobalBlockedYmd[ymdG] = true;
+        });
+        var biEl = document.getElementById('branchSearchInput');
+        if (biEl && masterBranches.length) biEl.placeholder = '지사 검색… (' + masterBranches.length + '개)';
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+
+    function clearLoginMembershipScope() {
+      loggedInAllowedBranchIds = null;
+      loggedInAllowedCompanyIds = null;
+      loggedInMembershipRows = [];
+      var banner = document.getElementById('loginMembershipBanner');
+      var hintEl = document.getElementById('loginMembershipExtraHint');
+      if (banner) banner.classList.add('d-none');
+      if (hintEl) {
+        hintEl.textContent = '';
+        hintEl.classList.add('d-none');
+      }
+    }
+
+    /**
+     * 로그인 세션과 user_company_memberships 기준으로 소속 업체 안내,
+     * 지사·업체 자동 선택(지사 1곳·업체 1곳일 때), 목록 필터 적용
+     */
+    async function loadLoggedInMembershipDefaults() {
+      var banner = document.getElementById('loginMembershipBanner');
+      var namesEl = document.getElementById('loginMembershipCompanyNames');
+      var hintEl = document.getElementById('loginMembershipExtraHint');
+      clearLoginMembershipScope();
+      try {
+        var sb = getSupabase();
+        var sessWrap = await sb.auth.getSession();
+        var session = sessWrap && sessWrap.data && sessWrap.data.session;
+        if (!session) return;
+
+        var r = await sb.from('user_company_memberships').select('company_id, companies(id, name, branch_id)');
+        if (r.error) {
+          console.warn(r.error);
+          return;
+        }
+        var raw = r.data || [];
+        var rows = [];
+        for (var i = 0; i < raw.length; i++) {
+          var row = raw[i];
+          var co = row.companies;
+          if (!co || co.id == null) continue;
+          rows.push({
+            company_id: Number(co.id),
+            name: String(co.name || ''),
+            branch_id: Number(co.branch_id)
+          });
+        }
+        if (!rows.length) return;
+
+        loggedInMembershipRows = rows.slice();
+
+        loggedInAllowedBranchIds = new Set();
+        loggedInAllowedCompanyIds = new Set();
+        rows.forEach(function (x) {
+          loggedInAllowedBranchIds.add(x.branch_id);
+          loggedInAllowedCompanyIds.add(x.company_id);
+        });
+
+        var distinctNames = [];
+        var seenN = {};
+        rows.forEach(function (x) {
+          var n = x.name.trim();
+          if (n && !seenN[n]) {
+            seenN[n] = true;
+            distinctNames.push(n);
+          }
+        });
+
+        if (banner && namesEl) {
+          namesEl.textContent = distinctNames.length ? distinctNames.join(', ') : '(업체명 없음)';
+          banner.classList.remove('d-none');
+        }
+
+        var uniqBranches = [];
+        rows.forEach(function (x) {
+          if (uniqBranches.indexOf(x.branch_id) === -1) uniqBranches.push(x.branch_id);
+        });
+
+        if (hintEl) {
+          hintEl.classList.remove('d-none');
+          if (uniqBranches.length > 1) {
+            hintEl.textContent = '연결된 지사가 여러 곳입니다. 관할 지사를 선택해 주세요.';
+          } else {
+            var sameB = rows.filter(function (z) { return z.branch_id === uniqBranches[0]; });
+            if (sameB.length > 1) {
+              hintEl.textContent = '동일 지사에 복수 업체가 연결되어 있습니다. 기본 선택된 업체를 업체 칸에서 변경할 수 있습니다.';
+            } else {
+              hintEl.textContent = '';
+              hintEl.classList.add('d-none');
+            }
+          }
+        }
+
+        if (uniqBranches.length === 1) {
+          var bid = uniqBranches[0];
+          var br = masterBranches.find(function (b) { return Number(b.id) === bid; });
+          if (br) {
+            fillLoggedInCompanyDisplayFromRows(rows);
+            selectBranch(bid, br.name);
+          }
+        } else {
+          fillLoggedInCompanyDisplayFromRows(rows);
+          var biPh = document.getElementById('branchSearchInput');
+          if (biPh && loggedInAllowedBranchIds && loggedInAllowedBranchIds.size > 1) {
+            biPh.placeholder = '소속 지사 검색 (' + loggedInAllowedBranchIds.size + '곳)';
+          }
+        }
+      } catch (e) {
+        console.warn(e);
+        clearLoginMembershipScope();
+      } finally {
+        syncCompanyPaneState();
+      }
+    }
+
+    // 30분 단위 창(09:00~15:30). 12:00·12:30은 예약 시작 불가이나 점심(12:00~13:00) 점유·60분 예약 겹침 판정에 사용
+    const SLOT_WINDOWS = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30'];
+    const BOOKABLE_SLOTS = SLOT_WINDOWS.filter(function (s) { return s < '12:00' || s >= '13:00'; });
+    const LUNCH_START_MIN = 12 * 60;
+    const LUNCH_END_MIN = 13 * 60;
+    const DAY_END_MIN = 16 * 60;
+    /** 하절기(7.1~8.31) 13:00~14:00 구간과 겹치는 예약 불가 */
+    const SUMMER_BLACKOUT_START_MIN = 13 * 60;
+    const SUMMER_BLACKOUT_END_MIN = 14 * 60;
+
+    const DAY_NAMES = ['일','월','화','수','목','금','토'];
+
+    function isYmdSummerAfternoonBlackoutSeason(ymd) {
+      if (!ymd || String(ymd).length < 10) return false;
+      var mo = parseInt(String(ymd).slice(5, 7), 10);
+      var da = parseInt(String(ymd).slice(8, 10), 10);
+      if (mo === 7) return da >= 1;
+      if (mo === 8) return da <= 31;
+      return false;
+    }
+
+    function overlapsSummerAfternoonBlackout(startSlot, durationMins, ymd) {
+      if (!ymd || !isYmdSummerAfternoonBlackoutSeason(ymd)) return false;
+      var sm = slotStartToMinutes(startSlot);
+      if (sm == null) return false;
+      var end = sm + durationMins;
+      return sm < SUMMER_BLACKOUT_END_MIN && end > SUMMER_BLACKOUT_START_MIN;
+    }
+
+    function updateSummerNoticeVisibility() {
+      var el = document.getElementById('timeSummerNotice');
+      if (!el) return;
+      var ymd = (document.getElementById('date') && document.getElementById('date').value.trim()) || '';
+      if (ymd && isYmdSummerAfternoonBlackoutSeason(ymd)) {
+        el.classList.remove('d-none');
+      } else {
+        el.classList.add('d-none');
+      }
+    }
+
+    function jsYmdToIsoDow(ymd) {
+      var d = new Date(ymd + 'T12:00:00');
+      var wd = d.getDay();
+      return wd === 0 ? 7 : wd;
+    }
+
+    function getAllowedWeekdaysForBranch(branchId) {
+      if (branchId == null || branchId === '') return null;
+      var arr = masterBranchWeekdays[String(branchId)];
+      if (!arr || arr.length === 0) return null;
+      return arr;
+    }
+
+    function isYmdAllowedForBranch(ymd, branchId) {
+      var allowed = getAllowedWeekdaysForBranch(branchId);
+      if (allowed === null) return true;
+      return allowed.indexOf(jsYmdToIsoDow(ymd)) !== -1;
+    }
+
+    function isYmdBlockedForBranch(ymd, branchId) {
+      if (!ymd) return false;
+      if (masterGlobalBlockedYmd[ymd]) return true;
+      if (branchId == null || branchId === '') return false;
+      var m = masterBranchBlockedYmd[String(branchId)];
+      return !!(m && m[ymd]);
+    }
+
+    function isDateTimeSectionUnlocked() {
+      return selectedBranchId != null && selectedCompanyId != null;
+    }
+
+    function syncDateTimeSectionLock() {
+      var sec = document.getElementById('dateTimeSection');
+      var locked = !isDateTimeSectionUnlocked();
+      if (sec) sec.classList.toggle('is-locked', locked);
+      var prev = document.getElementById('calPrev');
+      var next = document.getElementById('calNext');
+      if (prev) prev.disabled = locked;
+      if (next) next.disabled = locked;
+      updateDateTimeSectionLockHint();
+    }
+
+    function updateDateTimeSectionLockHint() {
+      var el = document.getElementById('dateTimeSectionLockHint');
+      if (!el) return;
+      if (isDateTimeSectionUnlocked()) {
+        el.classList.add('d-none');
+      } else {
+        el.classList.remove('d-none');
+        el.textContent = '관할 지사와 업체를 먼저 선택하면 달력에서 예약일을 고를 수 있습니다. 예약 가능일은 오늘부터 7일 후까지(오늘 포함)입니다. 환입 품목·소요 시간을 정한 뒤 일시를 고르면 30분·60분 예약에 맞는 가능 시간이 표시됩니다.';
+      }
+    }
+
+    function clearDateAndTimeSelection() {
+      selectedDateStr = '';
+      var de = document.getElementById('date');
+      if (de) de.value = '';
+      var te = document.getElementById('time');
+      if (te) te.value = '';
+      document.querySelectorAll('.time-slot-btn.selected').forEach(function (el) { el.classList.remove('selected'); });
+      var tsd = document.getElementById('timeSelectDate');
+      if (tsd) {
+        tsd.textContent = isDateTimeSectionUnlocked()
+          ? '달력에서 방문 예약일을 선택하면 예약 가능한 시간이 표시됩니다'
+          : '먼저 관할 지사와 업체를 선택해 주세요';
+      }
+      var grid = document.getElementById('timeSlots');
+      if (grid) {
+        var ph = isDateTimeSectionUnlocked()
+          ? '← 왼쪽 달력에서 방문 예약일을 선택해 주세요'
+          : '← 관할 지사·업체를 선택한 뒤 달력에서 예약일을 선택해 주세요';
+        grid.innerHTML = '<span class="time-select-placeholder col-12">' + ph + '</span>';
+      }
+      var hint = document.getElementById('timeSelectHint');
+      if (hint) {
+        hint.textContent = '';
+        hint.classList.remove('text-danger');
+      }
+      updateSummerNoticeVisibility();
+      renderCalendar();
+      syncDateTimeSectionLock();
+      if (typeof updateReservationSummary === 'function') updateReservationSummary();
+      if (typeof updateDurationPanel === 'function') updateDurationPanel();
+    }
+
+    function isCalDayDisabled(ymd, todayStr) {
+      if (ymd < todayStr) return true;
+      if (ymd > reservationYmdMaxInclusiveFromTodayStr(todayStr)) return true;
+      if (!isDateTimeSectionUnlocked()) return true;
+      if (!isYmdAllowedForBranch(ymd, selectedBranchId)) return true;
+      if (isYmdBlockedForBranch(ymd, selectedBranchId)) return true;
+      return false;
+    }
+
+    /**
+     * R2 업로드(Worker). fetch 대신 XHR을 써서 전송 바이트 기준 진행률(onProgress)을 얻습니다.
+     * onProgress(loadedBytes, totalBytes) — total이 0이면 막대만 생략하고 퍼센트는 추정 불가일 수 있음.
+     */
+    function uploadFileToR2(file, objectKey, onProgress) {
+      return new Promise(function (resolve, reject) {
+        const workerUrl = (typeof window !== 'undefined' && window.R2_UPLOAD_WORKER_URL)
+          ? window.R2_UPLOAD_WORKER_URL
+          : (typeof R2_UPLOAD_WORKER_URL !== 'undefined' ? R2_UPLOAD_WORKER_URL : '');
+        if (!String(workerUrl).trim()) {
+          reject(new Error('config.js에 R2_UPLOAD_WORKER_URL을 설정해 주세요.'));
+          return;
+        }
+        var fd = new FormData();
+        fd.append('file', file);
+        fd.append('key', objectKey);
+        const uploadSecret = (typeof window !== 'undefined' && window.R2_UPLOAD_SECRET != null)
+          ? window.R2_UPLOAD_SECRET
+          : (typeof R2_UPLOAD_SECRET !== 'undefined' ? R2_UPLOAD_SECRET : '');
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', workerUrl);
+        if (uploadSecret) {
+          xhr.setRequestHeader('X-Upload-Secret', uploadSecret);
+        }
+        xhr.timeout = 600000;
+        if (typeof onProgress === 'function') {
+          xhr.upload.onprogress = function (ev) {
+            if (ev.lengthComputable && ev.total > 0) {
+              onProgress(ev.loaded, ev.total);
+            } else if (ev.loaded > 0 && file && file.size > 0) {
+              onProgress(ev.loaded, file.size);
+            }
+          };
+        }
+        xhr.onload = function () {
+          var text = xhr.responseText || '';
+          if (xhr.status < 200 || xhr.status >= 300) {
+            reject(new Error(text || xhr.statusText || '업로드 실패'));
+            return;
+          }
+          var data;
+          try {
+            data = JSON.parse(text);
+          } catch (e) {
+            reject(new Error('업로드 응답이 올바르지 않습니다.'));
+            return;
+          }
+          if (!data || !data.url) {
+            reject(new Error('업로드 응답에 url이 없습니다.'));
+            return;
+          }
+          resolve(data.url);
+        };
+        xhr.onerror = function () {
+          reject(new Error('네트워크 오류로 업로드에 실패했습니다.'));
+        };
+        xhr.ontimeout = function () {
+          reject(new Error('업로드 시간이 초과되었습니다.'));
+        };
+        xhr.send(fd);
+      });
+    }
+
+    var calViewYear = new Date().getFullYear();
+    var calViewMonth = new Date().getMonth();
+    var selectedDateStr = '';
+
+    function toYMD(y, m, d) {
+      m = m + 1;
+      return y + '-' + (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d;
+    }
+
+    /** 오늘(로컬) 문자열 기준으로 예약 가능한 마지막 날짜 YMD — 오늘부터 달력으로 7일 후(총 8일 구간의 말일). */
+    function reservationYmdMaxInclusiveFromTodayStr(todayStr) {
+      var p = String(todayStr).split('-');
+      var d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+      d.setDate(d.getDate() + 7);
+      return toYMD(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    function renderCalendar() {
+      var first = new Date(calViewYear, calViewMonth, 1);
+      var last = new Date(calViewYear, calViewMonth + 1, 0);
+      var startBlank = first.getDay();
+      var daysInMonth = last.getDate();
+      var prevLast = new Date(calViewYear, calViewMonth, 0);
+      var prevDays = prevLast.getDate();
+      var today = new Date();
+      var todayStr = toYMD(today.getFullYear(), today.getMonth(), today.getDate());
+
+      document.getElementById('calTitle').textContent = calViewYear + '년 ' + (calViewMonth + 1) + '월';
+
+      var html = '';
+      for (var i = 0; i < startBlank; i++) {
+        var d = prevDays - startBlank + 1 + i;
+        var y = calViewMonth === 0 ? calViewYear - 1 : calViewYear;
+        var mo = calViewMonth === 0 ? 11 : calViewMonth - 1;
+        var cls = 'cal-day other-month';
+        if (i === 0) cls += ' sun';
+        if (i === 6) cls += ' sat';
+        var ymdPrev = toYMD(y, mo, d);
+        if (isCalDayDisabled(ymdPrev, todayStr)) cls += ' disabled';
+        html += '<span class="' + cls + '" data-ymd="' + ymdPrev + '">' + d + '</span>';
+      }
+      for (var d = 1; d <= daysInMonth; d++) {
+        var ymd = toYMD(calViewYear, calViewMonth, d);
+        var cls = 'cal-day';
+        if (isCalDayDisabled(ymd, todayStr)) cls += ' disabled';
+        var dayOfWeek = new Date(calViewYear, calViewMonth, d).getDay();
+        if (dayOfWeek === 0) cls += ' sun';
+        if (dayOfWeek === 6) cls += ' sat';
+        if (ymd === todayStr) cls += ' today';
+        if (ymd === selectedDateStr) cls += ' selected';
+        html += '<span class="' + cls + '" data-ymd="' + ymd + '">' + d + '</span>';
+      }
+      var remaining = 42 - (startBlank + daysInMonth);
+      for (var i = 0; i < remaining; i++) {
+        var d = i + 1;
+        var y = calViewMonth === 11 ? calViewYear + 1 : calViewYear;
+        var mo = calViewMonth === 11 ? 0 : calViewMonth + 1;
+        var cls = 'cal-day other-month';
+        if ((startBlank + daysInMonth + i) % 7 === 0) cls += ' sun';
+        if ((startBlank + daysInMonth + i) % 7 === 6) cls += ' sat';
+        var ymdNext = toYMD(y, mo, d);
+        if (isCalDayDisabled(ymdNext, todayStr)) cls += ' disabled';
+        html += '<span class="' + cls + '" data-ymd="' + ymdNext + '">' + d + '</span>';
+      }
+      var el = document.getElementById('calDays');
+      el.innerHTML = html;
+      el.querySelectorAll('.cal-day:not(.disabled)').forEach(function(cell) {
+        cell.addEventListener('click', function() {
+          var ymd = this.dataset.ymd;
+          if (isCalDayDisabled(ymd, todayStr)) return;
+          selectedDateStr = ymd;
+          document.getElementById('date').value = ymd;
+          renderCalendar();
+          updateDurationPanel();
+          updateSlots();
+        });
+      });
+    }
+
+    document.getElementById('calPrev').addEventListener('click', function() {
+      calViewMonth--;
+      if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
+      renderCalendar();
+    });
+    document.getElementById('calNext').addEventListener('click', function() {
+      calViewMonth++;
+      if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+      renderCalendar();
+    });
+
+    ensureBookingAuthOrRedirect().then(function (ok) {
+      if (!ok) return;
+      renderCalendar();
+      syncDateTimeSectionLock();
+      return loadBranchCompanyMasters().then(async function () {
+        bindBranchCompanyPickers();
+        await loadLoggedInMembershipDefaults();
+        syncDateTimeSectionLock();
+        renderCalendar();
+      });
+    });
+
+    function formatDateLabel(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + 'T12:00:00');
+      const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate(), w = d.getDay();
+      return y + '년 ' + (m < 10 ? '0' : '') + m + '월 ' + (day < 10 ? '0' : '') + day + '일 (' + DAY_NAMES[w] + '요일)';
+    }
+
+    function getReservationDurationFromRow(row) {
+      // 신규 스키마 우선: 전용 컬럼 사용
+      if (Number(row.reservation_duration_minutes) === 60) return 60;
+      // 하위 호환: 기존 person_info(JSON)에 저장된 값
+      var p = row.person_info;
+      if (p && typeof p === 'object' && Number(p.reservation_duration_minutes) === 60) return 60;
+      return 30;
+    }
+
+    function windowsOverlappingBooking(startSlot, durationMins) {
+      var sm = slotStartToMinutes(startSlot);
+      if (sm == null) return [];
+      var end = sm + durationMins;
+      var keys = [];
+      for (var i = 0; i < SLOT_WINDOWS.length; i++) {
+        var w = SLOT_WINDOWS[i];
+        var wm = slotStartToMinutes(w);
+        if (wm == null) continue;
+        var wEnd = wm + 30;
+        if (sm < wEnd && end > wm) keys.push(w);
+      }
+      return keys;
+    }
+
+    function buildOccupancyFromRows(rows) {
+      var occupancy = {};
+      SLOT_WINDOWS.forEach(function (s) { occupancy[s] = 0; });
+      (rows || []).forEach(function (row) {
+        var t = String(row.reservation_time || '').trim().substring(0, 5);
+        var dur = getReservationDurationFromRow(row);
+        windowsOverlappingBooking(t, dur).forEach(function (w) {
+          if (occupancy[w] !== undefined) occupancy[w] = 1;
+        });
+      });
+      return occupancy;
+    }
+
+    function getFormVehicleCount() {
+      var r = document.querySelector('input[name="vehicleCount"]:checked');
+      if (r && String(r.value) === '2') return 2;
+      return 1;
+    }
+
+    var MATERIAL_KIND_LABELS = {
+      scale_only: '1. 계근대 품목만',
+      scale_plus_transformer: '2. 계근대 품목 + 변압기류',
+      scale_two_loads_one_vehicle: '3. 계근대 품목만 2대 실은 차량'
+    };
+
+    /** 3번(2대 실음)은 차량 2대일 때만 선택 가능 */
+    function syncMaterialKindThreeSideNotice() {
+      var el = document.getElementById('materialKindThreeSideNotice');
+      var opt3 = document.getElementById('materialKindScaleTwoLoad');
+      if (!el || !opt3) return;
+      var show = opt3.checked && !opt3.disabled;
+      el.classList.toggle('d-none', !show);
+    }
+
+    function syncMaterialKindTwoVehicleOption() {
+      var opt3 = document.getElementById('materialKindScaleTwoLoad');
+      var wrap = document.getElementById('materialKindTwoVehicleOptionWrap');
+      if (!opt3) return;
+      var allow = getFormVehicleCount() === 2;
+      if (!allow) {
+        if (opt3.checked) opt3.checked = false;
+        opt3.disabled = true;
+        if (wrap) wrap.classList.add('is-disabled');
+      } else {
+        opt3.disabled = false;
+        if (wrap) wrap.classList.remove('is-disabled');
+      }
+      syncMaterialKindThreeSideNotice();
+    }
+
+    /** 「1. 계근대 품목만」일 때만 적재 50% 초과 여부 패널 표시 */
+    function syncScaleOnlyLoadRatioPanel() {
+      var wrap = document.getElementById('scaleOnlyLoadRatioWrap');
+      if (!wrap) return;
+      var show = getMaterialKindValue() === 'scale_only';
+      wrap.classList.toggle('d-none', !show);
+      if (!show) {
+        document.querySelectorAll('input[name="scaleOnlyLoadOver50"]').forEach(function (r) {
+          r.checked = false;
+        });
+      }
+    }
+
+    /** 계근대만 + 「예(초과)」이면 60분 권장 */
+    function isScaleOnlyLoadExceeding50ForDuration() {
+      if (getMaterialKindValue() !== 'scale_only') return false;
+      var r = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
+      return r && String(r.value) === 'yes';
+    }
+
+    function getMaterialKindValue() {
+      var r = document.querySelector('input[name="materialKind"]:checked');
+      return r ? String(r.value) : '';
+    }
+
+    function getMaterialKindLabel() {
+      var v = getMaterialKindValue();
+      return v && MATERIAL_KIND_LABELS[v] ? MATERIAL_KIND_LABELS[v] : '';
+    }
+
+    /** 제출 시 material_info 앞에 붙이는 메타(차량대수는 DB vehicle_count 컬럼에 별도 저장) */
+    function buildBookingMetaPrefix() {
+      var parts = [];
+      var kl = getMaterialKindLabel();
+      if (kl) parts.push('자재종류:' + kl);
+      if (getMaterialKindValue() === 'scale_only') {
+        var lr = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
+        if (lr) parts.push('적재50%초과:' + (String(lr.value) === 'yes' ? '예' : '아니오'));
+      }
+      if (!parts.length) return '';
+      return '[' + parts.join('][') + '] ';
+    }
+
+    function getMaterialTypeCount() {
+      return document.querySelectorAll('.material-checkbox:checked').length;
+    }
+
+    /** 폐전력량계 선택 시 소요 시간은 항상 30분(다른 조건 무시) */
+    function isScrapWattmeterSelected() {
+      var el = document.getElementById('material-scrap-wattmeter');
+      return !!(el && el.checked);
+    }
+
+    function isTonnageOver() {
+      var input = document.getElementById('vehicleTonnageInput');
+      if (!input) return false;
+      var n = parseFloat(String(input.value || '').trim());
+      if (isNaN(n)) return false;
+      return n > 4.5;
+    }
+
+    function getVehicleTonnageValue() {
+      var input = document.getElementById('vehicleTonnageInput');
+      if (!input) return null;
+      var raw = String(input.value || '').trim();
+      if (!raw) return null;
+      var n = parseFloat(raw);
+      if (isNaN(n) || n < 0) return null;
+      return n;
+    }
+
+    function computeRecommendedDuration() {
+      if (isScrapWattmeterSelected()) {
+        return { minutes: 30, reasons: ['폐전력량계'] };
+      }
+      var reasons = [];
+      var need60 = false;
+      if (isTonnageOver()) { need60 = true; reasons.push('4.5t 초과'); }
+      if (getFormVehicleCount() >= 2) { need60 = true; reasons.push('차량 2대'); }
+      if (getMaterialTypeCount() >= 5) { need60 = true; reasons.push('품목 5종 이상'); }
+      if (isScaleOnlyLoadExceeding50ForDuration()) { need60 = true; reasons.push('적재량 50% 초과'); }
+      return { minutes: need60 ? 60 : 30, reasons: reasons };
+    }
+
+    function isDurationManualMode() {
+      var r = document.querySelector('input[name="durationMode"]:checked');
+      return r && r.value === 'manual';
+    }
+
+    function getEffectiveDurationMinutes() {
+      if (isScaleOnlyLoadExceeding50ForDuration()) return 60;
+      var rec = computeRecommendedDuration();
+      if (!isDurationManualMode()) return rec.minutes;
+      var m = document.querySelector('input[name="durationManual"]:checked');
+      if (!m) return rec.minutes;
+      return parseInt(m.value, 10) === 60 ? 60 : 30;
+    }
+
+    function slotStartToMinutes(slot) {
+      var p = String(slot || '').trim().split(':');
+      if (p.length < 2) return null;
+      var h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+      if (isNaN(h) || isNaN(m)) return null;
+      return h * 60 + m;
+    }
+
+    function minutesToHHMM(total) {
+      var h = Math.floor(total / 60), mi = total % 60;
+      return (h < 10 ? '0' : '') + h + ':' + (mi < 10 ? '0' : '') + mi;
+    }
+
+    function formatReservationRange(startSlot, durationMins) {
+      var sm = slotStartToMinutes(startSlot);
+      if (sm == null) return '';
+      return minutesToHHMM(sm) + ' ~ ' + minutesToHHMM(sm + durationMins);
+    }
+
+    function setSummaryEl(id, text, emptyText) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var t = String(text || '').trim();
+      if (!t) {
+        el.textContent = emptyText != null ? emptyText : '—';
+        el.classList.add('is-empty');
+      } else {
+        el.textContent = t;
+        el.classList.remove('is-empty');
+      }
+    }
+
+    function updateReservationSummary() {
+      var bh = document.getElementById('branchIdHidden');
+      var bi = document.getElementById('branchSearchInput');
+      var branchShow = (bh && bh.value) ? (bi ? bi.value.trim() : '') : '';
+      setSummaryEl('sumBranch', branchShow, '—');
+
+      var ch = document.getElementById('companyNameHidden');
+      var ci = document.getElementById('companySearchInput');
+      var companyShow = (ch && ch.value) ? (ci ? ci.value.trim() : '') : '';
+      setSummaryEl('sumCompany', companyShow, '—');
+
+      var dateStr = (document.getElementById('date') && document.getElementById('date').value) ? document.getElementById('date').value.trim() : '';
+      setSummaryEl('sumVisitDate', dateStr ? formatDateLabel(dateStr) : '', '선택 전');
+
+      var form = document.getElementById('resForm');
+      var contact = form && form.contact ? form.contact.value.trim() : '';
+      var email = form && form.visitor_email ? form.visitor_email.value.trim() : '';
+      var people = form && form.people ? form.people.value.trim() : '';
+      setSummaryEl('sumContact', contact, '—');
+      setSummaryEl('sumEmail', email, '—');
+      setSummaryEl('sumPeople', people, '—');
+
+      var ton = getVehicleTonnageValue();
+      setSummaryEl('sumTonnage', ton != null ? String(ton) + ' 톤' : '', '—');
+
+      var car1El = document.querySelector('#resForm [name="car1"]');
+      var car2El = document.getElementById('car2Input');
+      var cars = [];
+      if (car1El && car1El.value.trim()) cars.push(car1El.value.trim());
+      if (car2El && car2El.value.trim()) cars.push(car2El.value.trim());
+      setSummaryEl('sumCars', cars.join(', '), '—');
+
+      var vc = getFormVehicleCount();
+      setSummaryEl('sumVehicleCount', vc === 2 ? '2대' : '1대', '—');
+      setSummaryEl('sumMaterialKind', getMaterialKindLabel(), '선택 전');
+
+      var names = [];
+      document.querySelectorAll('.material-checkbox:checked').forEach(function (el) {
+        var item = el.closest('.material-item');
+        var nm = item && item.querySelector('.item-name');
+        names.push(nm ? nm.textContent.trim() : el.value);
+      });
+      var matEl = document.getElementById('sumMaterials');
+      if (matEl) {
+        if (names.length === 0) {
+          matEl.textContent = '—';
+          matEl.classList.add('is-empty');
+          matEl.removeAttribute('title');
+        } else {
+          matEl.classList.remove('is-empty');
+          matEl.setAttribute('title', names.join(', '));
+          var maxShow = 2;
+          if (names.length <= maxShow) {
+            matEl.textContent = names.join(', ');
+          } else {
+            matEl.textContent = names.slice(0, maxShow).join(', ') + ' 외 ' + (names.length - maxShow) + '건';
+          }
+        }
+      }
+
+      var dur = getEffectiveDurationMinutes();
+      var timeVal = (document.getElementById('time') && document.getElementById('time').value) ? document.getElementById('time').value.trim() : '';
+      var slotText = document.getElementById('sumSlotText');
+      var slotLine = document.getElementById('sumSlotLine');
+      if (slotText) {
+        if (!dateStr) {
+          slotText.textContent = isDateTimeSectionUnlocked() ? '날짜를 먼저 선택하세요' : '지사·업체 선택 후 날짜를 선택하세요';
+        } else if (!timeVal) {
+          slotText.textContent = '시간 미선택 · 소요 ' + dur + '분';
+        } else {
+          slotText.textContent = formatReservationRange(timeVal, dur) + ' (소요 ' + dur + '분)';
+        }
+      }
+      if (slotLine) {
+        if (dateStr && timeVal) slotLine.classList.remove('is-pending');
+        else slotLine.classList.add('is-pending');
+      }
+    }
+
+    function slotRangeFits(occupancy, startSlot, durationMins, reservationYmd) {
+      if (BOOKABLE_SLOTS.indexOf(startSlot) < 0) return false;
+      var sm = slotStartToMinutes(startSlot);
+      if (sm == null) return false;
+      var end = sm + durationMins;
+      if (end > DAY_END_MIN) return false;
+      if (sm < LUNCH_END_MIN && end > LUNCH_START_MIN) return false;
+      if (overlapsSummerAfternoonBlackout(startSlot, durationMins, reservationYmd)) return false;
+      var keys = windowsOverlappingBooking(startSlot, durationMins);
+      for (var i = 0; i < keys.length; i++) {
+        var s = keys[i];
+        if (occupancy[s] === undefined) return false;
+        if (occupancy[s] > 0) return false;
+      }
+      return true;
+    }
+
+    function updateDurationPanel() {
+      var rec = computeRecommendedDuration();
+      var elVal = document.getElementById('durationRecValue');
+      var elBadges = document.getElementById('durationRecBadges');
+      var panelManual = document.getElementById('durationManualPanel');
+      if (elVal) elVal.textContent = '권장: ' + rec.minutes + '분';
+      if (elBadges) {
+        if (rec.reasons.length === 0) {
+          elBadges.innerHTML = '<span class="badge bg-light text-dark border">기본 30분</span>';
+        } else {
+          elBadges.innerHTML = rec.reasons.map(function (r) {
+            return '<span class="badge bg-light text-primary border me-1 mb-1">' + r + '</span>';
+          }).join('');
+        }
+      }
+      if (panelManual) {
+        if (isDurationManualMode()) {
+          panelManual.classList.remove('d-none');
+          var m30 = document.getElementById('durationManual30');
+          var m60 = document.getElementById('durationManual60');
+          var man = document.querySelector('input[name="durationManual"]:checked');
+          if (!man) {
+            if (rec.minutes === 60) { if (m60) m60.checked = true; }
+            else { if (m30) m30.checked = true; }
+          }
+        } else {
+          panelManual.classList.add('d-none');
+        }
+      }
+      // 중량/소요시간 변경 시에는 예약시간 재조회 요청을 보내지 않음
+      updateReservationSummary();
+    }
+
+    // [1] 날짜 선택 시 예약 가능 시간대 조회 후 버튼으로 표시
+    async function updateSlots() {
+      const date = document.getElementById('date').value;
+      const dateLabel = document.getElementById('timeSelectDate');
+      const grid = document.getElementById('timeSlots');
+      const hint = document.getElementById('timeSelectHint');
+      const timeInput = document.getElementById('time');
+      const prevSelected = timeInput.value;
+
+      timeInput.value = '';
+      document.querySelectorAll('.time-slot-btn.selected').forEach(el => el.classList.remove('selected'));
+      updateSummerNoticeVisibility();
+
+      if (!date) {
+        if (isDateTimeSectionUnlocked()) {
+          dateLabel.textContent = '달력에서 방문 예약일을 선택하면 예약 가능한 시간이 표시됩니다';
+          grid.innerHTML = '<span class="time-select-placeholder col-12">← 왼쪽 달력에서 방문 예약일을 선택해 주세요</span>';
+        } else {
+          dateLabel.textContent = '먼저 관할 지사와 업체를 선택해 주세요';
+          grid.innerHTML = '<span class="time-select-placeholder col-12">← 관할 지사·업체를 선택한 뒤 달력에서 예약일을 선택해 주세요</span>';
+        }
+        hint.textContent = '';
+        updateReservationSummary();
+        return;
+      }
+
+      dateLabel.textContent = formatDateLabel(date);
+      grid.innerHTML = '<span class="time-select-loading text-muted">예약 현황 조회 중...</span>';
+      hint.textContent = '';
+
+      try {
+        const sb = getSupabase();
+        const { data, error } = await sb
+          .from('reservations')
+          .select('reservation_time, car_number_1, car_number_2, reservation_duration_minutes, person_info')
+          .eq('reservation_date', date)
+          .neq('status', '반려');
+
+        if (error) {
+          grid.innerHTML = '';
+          hint.textContent = '조회 오류: ' + error.message;
+          hint.classList.add('text-danger');
+          updateReservationSummary();
+          return;
+        }
+
+        const occupancy = buildOccupancyFromRows(data);
+        const durationMins = getEffectiveDurationMinutes();
+
+        let available = BOOKABLE_SLOTS.filter(function (s) {
+          return slotRangeFits(occupancy, s, durationMins, date);
+        });
+
+        var today = new Date();
+        var todayStr = toYMD(today.getFullYear(), today.getMonth(), today.getDate());
+        if (date === todayStr) {
+          var currentTimeStr = (today.getHours() < 10 ? '0' : '') + today.getHours() + ':' + (today.getMinutes() < 10 ? '0' : '') + today.getMinutes();
+          available = available.filter(function (s) { return s > currentTimeStr; });
+        }
+
+        grid.innerHTML = '';
+
+        if (available.length === 0) {
+          hint.textContent = '해당 날짜는 예약이 마감되었습니다.';
+          hint.classList.add('text-danger');
+          updateReservationSummary();
+          return;
+        }
+
+        // hint.textContent = '예약 가능한 시간을 선택하세요. (동일 시간 중복 예약 불가)';
+        // if (durationMins === 60) {
+        //   hint.textContent += ' 60분 예약은 시작 시각 기준 연속 2타임(30분×2)이 배정됩니다.';
+        // }
+        hint.classList.remove('text-danger');
+
+        available.forEach(s => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'time-slot-btn';
+          btn.textContent = s;
+          btn.dataset.time = s;
+          btn.addEventListener('click', function () {
+            document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
+            timeInput.value = s;
+            updateReservationSummary();
+          });
+          grid.appendChild(btn);
+        });
+
+        if (prevSelected && available.indexOf(prevSelected) !== -1) {
+          timeInput.value = prevSelected;
+          grid.querySelectorAll('.time-slot-btn').forEach(function (b) {
+            if (b.dataset.time === prevSelected) b.classList.add('selected');
+          });
+        }
+        updateReservationSummary();
+      } catch (e) {
+        grid.innerHTML = '';
+        hint.textContent = '연결 오류: ' + (e.message || e);
+        hint.classList.add('text-danger');
+        updateReservationSummary();
+      }
+    }
+
+    function toggleMaterialQtyRow(checkbox) {
+      var item = checkbox.closest('.material-item');
+      if (!item) return;
+      var qty = item.querySelector('.material-qty');
+      if (!qty) return;
+      if (checkbox.checked) {
+        item.classList.add('is-checked');
+        qty.disabled = false;
+        qty.focus();
+      } else {
+        item.classList.remove('is-checked');
+        qty.disabled = true;
+        qty.value = '';
+      }
+    }
+
+    function syncMaterialSummary() {
+      var summaryInput = document.getElementById('materialSummary');
+      if (!summaryInput) return '';
+      var parts = [];
+      document.querySelectorAll('.material-checkbox:checked').forEach(function (el) {
+        var item = el.closest('.material-item');
+        var qtyInput = item && item.querySelector('.material-qty');
+        var raw = qtyInput ? String(qtyInput.value).trim() : '';
+        if (!raw) return;
+        var unit = el.dataset.unit || '';
+        parts.push(el.value + ' ' + raw + ' ' + unit);
+      });
+      summaryInput.value = parts.join(', ');
+      return summaryInput.value;
+    }
+
+    function validateMaterialSelection() {
+      var anyChecked = false;
+      var items = document.querySelectorAll('.material-item');
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var cb = item.querySelector('.material-checkbox');
+        var qty = item.querySelector('.material-qty');
+        if (!cb || !qty) continue;
+        if (cb.checked) {
+          anyChecked = true;
+          var v = String(qty.value).trim();
+          if (v === '') {
+            return { ok: false, message: '선택한 품목의 수량을 입력해 주세요: ' + cb.value };
+          }
+          var n = parseFloat(v);
+          if (isNaN(n) || n <= 0) {
+            return { ok: false, message: '수량은 0보다 큰 숫자로 입력해 주세요: ' + cb.value };
+          }
+          if (cb.dataset.unit === 'EA' && Math.floor(n) !== n) {
+            return { ok: false, message: 'EA 품목은 정수로 입력해 주세요: ' + cb.value };
+          }
+        }
+      }
+      if (!anyChecked) {
+        return { ok: false, message: '환입 품목을 최소 1개 선택하고 수량을 입력해 주세요.' };
+      }
+      return { ok: true };
+    }
+
+    (function bindMaterialCheckboxes() {
+      var boxes = document.querySelectorAll('.material-checkbox');
+      boxes.forEach(function (box) {
+        box.addEventListener('change', function () {
+          toggleMaterialQtyRow(box);
+          syncMaterialSummary();
+          if (typeof updateDurationPanel === 'function') updateDurationPanel();
+          if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
+            updateSlots();
+          }
+          updateReservationSummary();
+        });
+      });
+      document.querySelectorAll('.material-qty').forEach(function (inp) {
+        inp.addEventListener('input', function () {
+          syncMaterialSummary();
+          if (typeof updateDurationPanel === 'function') updateDurationPanel();
+          if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
+            updateSlots();
+          }
+          updateReservationSummary();
+        });
+      });
+      syncMaterialSummary();
+      updateReservationSummary();
+    })();
+
+    (function bindDurationControls() {
+      document.querySelectorAll('input[name="durationMode"], input[name="durationManual"]').forEach(function (el) {
+        el.addEventListener('change', function () {
+          if (typeof updateDurationPanel === 'function') updateDurationPanel();
+          if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
+            updateSlots();
+          }
+        });
+      });
+      var tonnageInput = document.getElementById('vehicleTonnageInput');
+      if (tonnageInput) {
+        tonnageInput.addEventListener('input', function () {
+          if (typeof updateDurationPanel === 'function') updateDurationPanel();
+        });
+      }
+      var car2 = document.getElementById('car2Input');
+      if (car2) {
+        car2.addEventListener('input', function () {
+          updateReservationSummary();
+        });
+      }
+      if (typeof updateDurationPanel === 'function') updateDurationPanel();
+    })();
+
+    (function bindVehicleCountAndMaterialKind() {
+      var car2Input = document.getElementById('car2Input');
+      function syncCar2EnabledState() {
+        if (!car2Input) return;
+        var two = getFormVehicleCount() === 2;
+        car2Input.disabled = !two;
+        car2Input.title = two ? '' : '차량 대수를 2대로 선택한 경우에만 입력할 수 있습니다.';
+        if (!two) {
+          car2Input.value = '';
+          car2Input.blur();
+        }
+      }
+      function onVehicleCountChange() {
+        syncCar2EnabledState();
+        syncMaterialKindTwoVehicleOption();
+        var sel = document.querySelector('input[name="vehicleCount"]:checked');
+        if (sel && sel.value === '2' && car2Input) {
+          try { car2Input.focus(); } catch (e) { /* ignore */ }
+        }
+        if (typeof updateDurationPanel === 'function') updateDurationPanel();
+        if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
+          updateSlots();
+        }
+        updateReservationSummary();
+      }
+      document.querySelectorAll('input[name="vehicleCount"]').forEach(function (r) {
+        r.addEventListener('change', onVehicleCountChange);
+      });
+      document.querySelectorAll('input[name="materialKind"]').forEach(function (r) {
+        r.addEventListener('change', function () {
+          syncScaleOnlyLoadRatioPanel();
+          syncMaterialKindTwoVehicleOption();
+          if (typeof updateDurationPanel === 'function') updateDurationPanel();
+          if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
+            updateSlots();
+          }
+          updateReservationSummary();
+        });
+      });
+      document.querySelectorAll('input[name="scaleOnlyLoadOver50"]').forEach(function (r) {
+        r.addEventListener('change', function () {
+          if (getMaterialKindValue() === 'scale_only' && String(r.value) === 'yes' && r.checked) {
+            var autoEl = document.getElementById('durationModeAuto');
+            if (autoEl) autoEl.checked = true;
+          }
+          if (typeof updateDurationPanel === 'function') updateDurationPanel();
+          if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
+            updateSlots();
+          }
+          updateReservationSummary();
+        });
+      });
+      syncCar2EnabledState();
+      syncMaterialKindTwoVehicleOption();
+      syncScaleOnlyLoadRatioPanel();
+      updateReservationSummary();
+    })();
+
+    (function bindReservationSummaryFormListeners() {
+      var f = document.getElementById('resForm');
+      if (!f) return;
+      f.addEventListener('input', function () { updateReservationSummary(); });
+      f.addEventListener('change', function () { updateReservationSummary(); });
+    })();
+
+    (function setupSafetyRulesModal() {
+      var root = document.getElementById('safetyRulesModal');
+      var openBtn = document.getElementById('openSafetyRulesModal');
+      var closeBtn = document.getElementById('safetyRulesModalCloseBtn');
+      var dismissBtn = document.getElementById('safetyRulesModalDismissBtn');
+      var confirmBtn = document.getElementById('safetyRulesModalConfirmBtn');
+      var innerCheck = document.getElementById('safetyRulesModalInnerCheck');
+      var mainAck = document.getElementById('safetyRulesAck');
+      var hint = document.getElementById('safetyRulesAckHint');
+      var modalBody = root.querySelector('.safety-rules-modal-body');
+      if (!root || !openBtn || !mainAck) return;
+
+      function syncSafetyRulesAckHint() {
+        if (!hint) return;
+        if (mainAck.checked) {
+          hint.textContent = '이미지 확인이 완료되었습니다. 다시 보려면 위 버튼을 누르세요.';
+          hint.style.color = '#15803d';
+        } else {
+          hint.textContent = '모달에서 이미지 확인 후 「확인 완료」를 누르면 여기에 체크됩니다.';
+          hint.style.color = '';
+        }
+      }
+
+      function openSafetyRulesModal() {
+        if (innerCheck) innerCheck.checked = !!mainAck.checked;
+        root.classList.add('is-open');
+        root.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        if (modalBody) modalBody.scrollTop = 0;
+        // 하단 체크박스에 포커스하면 스크롤이 아래로 붙음 → 상단부터 보이게 닫기 버튼에 포커스
+        if (closeBtn) closeBtn.focus();
+        requestAnimationFrame(function () {
+          if (modalBody) modalBody.scrollTop = 0;
+        });
+      }
+
+      function closeSafetyRulesModal() {
+        root.classList.remove('is-open');
+        root.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        if (openBtn) openBtn.focus();
+      }
+
+      openBtn.addEventListener('click', function () { openSafetyRulesModal(); });
+
+      function onDismiss() {
+        closeSafetyRulesModal();
+      }
+
+      if (closeBtn) closeBtn.addEventListener('click', onDismiss);
+      if (dismissBtn) dismissBtn.addEventListener('click', onDismiss);
+      root.querySelectorAll('[data-safety-modal-dismiss]').forEach(function (el) {
+        el.addEventListener('click', onDismiss);
+      });
+
+      if (confirmBtn && innerCheck) {
+        confirmBtn.addEventListener('click', function () {
+          if (!innerCheck.checked) {
+            alert('안전수칙 이미지를 확인하신 뒤 동의란에 체크해 주세요.');
+            innerCheck.focus();
+            return;
+          }
+          mainAck.checked = true;
+          syncSafetyRulesAckHint();
+          closeSafetyRulesModal();
+        });
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (!root.classList.contains('is-open')) return;
+        e.preventDefault();
+        onDismiss();
+      });
+
+      syncSafetyRulesAckHint();
+    })();
+
+    // 필수 파일 입력: 브라우저 기본 문구(예: "파일을 선택하세요") 대신 안내 문구 표시
+    (function setupRequiredDocFileValidationMessages() {
+      var docFileMsgs = {
+        f1: '「위험성 체크리스트」 파일을 첨부해 주세요.',
+        f2: '「안전 교육 일지」 파일을 첨부해 주세요.'
+      };
+      ['f1', 'f2'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('invalid', function () {
+          if (el.validity.valueMissing) el.setCustomValidity(docFileMsgs[id] || '');
+          else el.setCustomValidity('');
+        });
+        el.addEventListener('change', function () { el.setCustomValidity(''); });
+      });
+    })();
+
+    // [2] 폼 제출: Storage 업로드 후 예약 INSERT (Supabase)
+    async function handleFormSubmit() {
+      const form = document.getElementById('resForm');
+      syncMaterialSummary();
+      var matCheck = validateMaterialSelection();
+      if (!matCheck.ok) {
+        alert(matCheck.message);
+        return;
+      }
+      if (!getMaterialKindValue()) {
+        alert('자재 종류 구분을 선택해 주세요.');
+        return;
+      }
+      syncMaterialKindTwoVehicleOption();
+      if (getMaterialKindValue() === 'scale_two_loads_one_vehicle' && getFormVehicleCount() !== 2) {
+        alert('「3. 계근대 품목만 2대 실은 차량」은 차량 대수를 2대로 선택한 경우에만 선택할 수 있습니다.');
+        return;
+      }
+      if (getMaterialKindValue() === 'scale_only') {
+        var lr50 = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
+        if (!lr50) {
+          alert('「1. 계근대 품목만」을 선택하신 경우, 적재량이 차량 중량(톤) 기준 50%를 초과하는지「아니오 / 예(초과)」를 선택해 주세요.');
+          return;
+        }
+      }
+      if (getFormVehicleCount() === 2 && !((form.car2 && form.car2.value) || '').trim()) {
+        alert('차량 대수를 2대로 선택하신 경우 차량번호 2도 입력해 주세요.');
+        return;
+      }
+      var safetyRulesAck = document.getElementById('safetyRulesAck');
+      if (!safetyRulesAck || !safetyRulesAck.checked) {
+        alert('현장 안전수칙 이미지를 모달에서 확인한 뒤 동의(체크)해 주세요.');
+        var ob = document.getElementById('openSafetyRulesModal');
+        if (ob) ob.focus();
+        return;
+      }
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+
+      const branchIdRaw = document.getElementById('branchIdHidden').value.trim();
+      const companyName = form.company.value.trim();
+      const companyIdRaw = document.getElementById('companyIdHidden').value.trim();
+      if (!branchIdRaw) {
+        alert('관할 지사를 목록에서 선택해 주세요.');
+        return;
+      }
+      if (!companyName || !companyIdRaw) {
+        alert('소속 업체를 목록에서 선택해 주세요.');
+        return;
+      }
+
+      const reservationDate = form.date.value;
+      if (!reservationDate) {
+        alert('방문 예약일을 달력에서 선택해 주세요.');
+        return;
+      }
+      if (!isYmdAllowedForBranch(reservationDate, parseInt(branchIdRaw, 10))) {
+        alert('선택한 예약일은 해당 관할 지사의 지정 요일에 포함되지 않습니다. 달력에서 허용된 요일만 선택해 주세요.');
+        return;
+      }
+      if (isYmdBlockedForBranch(reservationDate, parseInt(branchIdRaw, 10))) {
+        alert('선택한 예약일은 해당 지사에서 환입이 제한된 날짜입니다. 다른 날짜를 선택해 주세요.');
+        return;
+      }
+      var todayForLimit = new Date();
+      var todayStrForLimit = toYMD(todayForLimit.getFullYear(), todayForLimit.getMonth(), todayForLimit.getDate());
+      var bookMaxYmd = reservationYmdMaxInclusiveFromTodayStr(todayStrForLimit);
+      if (reservationDate < todayStrForLimit || reservationDate > bookMaxYmd) {
+        alert('예약은 오늘부터 7일 후까지(오늘 포함)만 가능합니다. 달력에서 선택 가능한 날짜를 다시 확인해 주세요.');
+        return;
+      }
+
+      resetLoaderProgressWidgets();
+      setLoaderMainMessage('서류 파일을 업로드하는 중입니다...');
+      loader.style.display = 'flex';
+
+      try {
+        const date = reservationDate;
+        const contact = form.contact.value.trim();
+        const visitorEmail = (form.visitor_email && form.visitor_email.value) ? form.visitor_email.value.trim() : '';
+        const recDur = computeRecommendedDuration();
+        const effDur = getEffectiveDurationMinutes();
+        const vehicleTonnage = getVehicleTonnageValue();
+
+        const sb = getSupabase();
+
+        const reservationId = crypto.randomUUID();
+        const files = [
+          document.getElementById('f1').files[0],
+          document.getElementById('f2').files[0]
+        ];
+
+        const getExt = (f) => {
+          const n = (f && f.name) || '';
+          const i = n.lastIndexOf('.');
+          return i > 0 ? n.slice(i) : '.pdf';
+        };
+
+        var progressArea = document.getElementById('loaderProgressArea');
+        if (progressArea) progressArea.style.display = 'block';
+
+        const fileUrls = [];
+        for (let i = 0; i < 2; i++) {
+          const file = files[i];
+          const path = `${reservationId}/file${i + 1}${getExt(file)}`;
+          var labelEl = document.getElementById('loaderProgressLabel');
+          var sizeMb = (file && file.size) ? (file.size / (1024 * 1024)).toFixed(1) : '';
+          if (labelEl) {
+            labelEl.textContent = '첨부 서류 ' + (i + 1) + '/2 전송' + (sizeMb ? ' (약 ' + sizeMb + 'MB)' : '');
+          }
+          var barEl = document.getElementById('loaderProgressBar');
+          var pctEl = document.getElementById('loaderProgressPct');
+          if (barEl) barEl.style.width = '0%';
+          if (pctEl) pctEl.textContent = '0%';
+          try {
+            const publicUrl = await uploadFileToR2(file, path, function (loaded, total) {
+              var pct = (total > 0) ? Math.min(100, Math.round((100 * loaded) / total)) : 0;
+              if (barEl) barEl.style.width = pct + '%';
+              if (pctEl) pctEl.textContent = pct + '%';
+            });
+            if (barEl) barEl.style.width = '100%';
+            if (pctEl) pctEl.textContent = '100%';
+            fileUrls.push(publicUrl);
+          } catch (uploadErr) {
+            hideBookingLoader();
+            alert('서류 업로드 오류: ' + (uploadErr.message || uploadErr));
+            return;
+          }
+        }
+
+        if (progressArea) progressArea.style.display = 'none';
+        setLoaderMainMessage('예약 정보를 등록하는 중입니다...');
+
+        const { data: subData, error: subErr } = await sb.functions.invoke('submit-reservation', {
+          body: {
+            reservation_date: date,
+            reservation_time: form.time.value,
+            company_name: companyName,
+            branch_id: parseInt(branchIdRaw, 10),
+            company_id: parseInt(companyIdRaw, 10),
+            contact: contact,
+            visitor_email: visitorEmail || null,
+            car_number_1: form.car1.value.trim(),
+            car_number_2: (form.car2.value || '').trim() || null,
+            material_info: (buildBookingMetaPrefix() + form.material.value.trim()).trim(),
+            vehicle_count: getFormVehicleCount(),
+            person_info: form.people.value.trim(),
+            vehicle_tonnage: vehicleTonnage,
+            reservation_duration_minutes: effDur,
+            duration_mode: isDurationManualMode() ? 'manual' : 'auto',
+            recommended_duration_minutes: recDur.minutes,
+            recommended_reasons: recDur.reasons,
+            doc_url_1: fileUrls[0],
+            doc_url_2: fileUrls[1]
+          }
+        });
+
+        if (subErr) {
+          hideBookingLoader();
+          alert('신청 오류: ' + (subErr.message || String(subErr)));
+          return;
+        }
+        if (!subData || !subData.ok) {
+          hideBookingLoader();
+          alert((subData && subData.error) ? subData.error : '신청에 실패했습니다.');
+          return;
+        }
+
+        hideBookingLoader();
+        document.getElementById('form-section').style.display = 'none';
+        document.getElementById('success-section').style.display = 'block';
+        window.scrollTo(0, 0);
+      } catch (e) {
+        hideBookingLoader();
+        alert('처리 중 오류가 발생했습니다: ' + (e.message || e));
+      }
+    }
+
+    // 연락처 입력 시 010-1234-5678 형식으로 자동 하이픈
+    (function formatContactInput() {
+      var contactInput = document.getElementById('contactInput');
+      if (!contactInput) return;
+      contactInput.addEventListener('input', function() {
+        var v = this.value.replace(/[^0-9]/g, '');
+        if (v.length <= 3) {
+          this.value = v;
+        } else if (v.length <= 7) {
+          this.value = v.slice(0, 3) + '-' + v.slice(3);
+        } else {
+          this.value = v.slice(0, 3) + '-' + v.slice(3, 7) + '-' + v.slice(7, 11);
+        }
+      });
+    })();
+
+    window.updateSlots = updateSlots;
+    window.updateDurationPanel = updateDurationPanel;
+    window.handleFormSubmit = handleFormSubmit;
+
+    (function setupReservationSummarySticky() {
+      var aside = document.querySelector('.res-summary-aside');
+      var header = document.querySelector('.top-header');
+      if (!aside || !header) return;
+
+      function mqDesktop() {
+        return window.matchMedia('(min-width: 992px)').matches;
+      }
+
+      function syncStickyTop() {
+        if (!mqDesktop()) {
+          aside.style.removeProperty('--summary-sticky-top');
+          aside.classList.remove('is-stuck');
+          return;
+        }
+        var gap = 8;
+        var h = Math.ceil(header.getBoundingClientRect().height);
+        aside.style.setProperty('--summary-sticky-top', (h + gap) + 'px');
+      }
+
+      function updateStuckShadow() {
+        if (!mqDesktop()) {
+          aside.classList.remove('is-stuck');
+          return;
+        }
+        var gap = 8;
+        var h = header.offsetHeight;
+        var stickAt = h + gap;
+        var r = aside.getBoundingClientRect();
+        aside.classList.toggle('is-stuck', Math.abs(r.top - stickAt) < 4);
+      }
+
+      syncStickyTop();
+      updateStuckShadow();
+      window.addEventListener('resize', function () {
+        syncStickyTop();
+        updateStuckShadow();
+      });
+      window.addEventListener('scroll', updateStuckShadow, { passive: true });
+      if (window.ResizeObserver) {
+        try {
+          var ro = new ResizeObserver(function () {
+            syncStickyTop();
+            updateStuckShadow();
+          });
+          ro.observe(header);
+        } catch (e) { /* ignore */ }
+      }
+    })();
+    })();
+  </script>
+</body>
+</html>

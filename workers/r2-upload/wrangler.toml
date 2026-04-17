@@ -1,0 +1,18 @@
+# Cloudflare R2 업로드 Worker
+# 1) R2에서 버킷 생성 후 아래 bucket_name 을 실제 이름으로 수정
+# 2) R2_PUBLIC_BASE_URL: 버킷 공개 URL (R2.dev 또는 커스텀 도메인, 끝의 / 제외)
+# 3) (선택) wrangler secret put UPLOAD_SECRET — config.js 의 R2_UPLOAD_SECRET 과 동일하게
+
+name = "reservation-r2-upload"
+main = "worker.js"
+compatibility_date = "2024-12-01"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "reservation-files"
+
+[vars]
+R2_PUBLIC_BASE_URL = "https://pub-31a54c89cca345ed905575308ebb55ac.r2.dev"
+
+# [vars]
+# R2_PUBLIC_BASE_URL = "https://files.example.com"

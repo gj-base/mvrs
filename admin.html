@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>자재센터 불용자재 환입차량 예약시스템</title>
   <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/ko.global.min.js'></script>
@@ -31,6 +32,8 @@
     .header-left { display: flex; align-items: center; }
     .kepco-logo { height: 35px; margin-right: 18px; }
     .system-name { color: var(--kepco-blue); font-weight: 800; font-size: 1.35rem; margin: 0; border-left: 2px solid #eee; padding-left: 18px; }
+    .system-name-link { color: inherit; text-decoration: none; }
+    .system-name-link:hover { opacity: 0.88; }
     .user-link { text-decoration: none; color: #6c757d; font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; transition: 0.2s; }
     .user-link:hover { color: var(--kepco-blue); }
 
@@ -39,9 +42,133 @@
     .btn-login { background: var(--kepco-blue); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 700; width: 100%; font-size: 1.1rem; }
     input[type="password"] { padding: 14px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 25px; width: 100%; text-align: center; font-size: 1.1rem; }
 
-    /* 3. 캘린더 컨테이너 커스텀 */
-    #calendar-container { display: none; width: 94%; max-width: 1300px; margin: 40px auto; }
-    #calendar { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 15px 45px rgba(0,71,149,0.08); border: none; }
+    /* 3. 관리자 앱: 좌측 메뉴 + 본문 */
+    #calendar-container {
+      display: none;
+      width: 100%;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px 3% 40px;
+      box-sizing: border-box;
+      gap: 0;
+      align-items: stretch;
+      min-height: calc(100vh - 72px);
+    }
+    #calendar-container.admin-layout-visible {
+      display: flex;
+      flex-direction: row;
+    }
+    .admin-sidebar {
+      flex: 0 0 228px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0, 71, 149, 0.08);
+      border: 1px solid #e8eef4;
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      align-self: flex-start;
+      position: sticky;
+      top: 84px;
+    }
+    .admin-sidebar-title {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      color: #8896a8;
+      text-transform: uppercase;
+      padding: 0 10px 12px;
+      border-bottom: 1px solid #eef2f6;
+      margin-bottom: 10px;
+    }
+    .admin-nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: transparent;
+      border-radius: 12px;
+      padding: 12px 12px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #444;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      font-family: inherit;
+    }
+    .admin-nav-btn:hover {
+      background: #f0f6fc;
+      color: var(--kepco-blue);
+    }
+    .admin-nav-btn.is-active {
+      background: linear-gradient(135deg, rgba(0, 71, 149, 0.1) 0%, rgba(0, 71, 149, 0.04) 100%);
+      color: var(--kepco-blue);
+      box-shadow: inset 0 0 0 1px rgba(0, 71, 149, 0.12);
+    }
+    .admin-nav-btn .admin-nav-ico { font-size: 1.1rem; line-height: 1; width: 1.35rem; text-align: center; }
+    .admin-main {
+      flex: 1;
+      min-width: 0;
+      padding-left: 22px;
+    }
+    .admin-panel { display: none; }
+    .admin-panel.is-active { display: block; }
+    .admin-panel-head {
+      margin-bottom: 18px;
+    }
+    .admin-panel-head h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--kepco-blue);
+      margin: 0 0 4px;
+    }
+    .admin-panel-head p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #6c757d;
+    }
+    #calendar { background: white; padding: 24px 28px 16px; border-radius: 20px; box-shadow: 0 15px 45px rgba(0,71,149,0.08); border: none; }
+    .admin-companies-wrap .table { font-size: 0.875rem; }
+    .admin-companies-wrap .table td { vertical-align: middle; }
+    .admin-companies-wrap .cell-truncate {
+      max-width: 14rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    @media (min-width: 1200px) {
+      .admin-companies-wrap .cell-truncate-wide { max-width: 22rem; }
+    }
+    #sitePopupsTableBody tr.site-popup-select-row {
+      cursor: pointer;
+    }
+    #sitePopupsTableBody tr.site-popup-select-row:hover td:not(.site-popup-actions-cell) {
+      background-color: rgba(0, 71, 149, 0.05);
+    }
+    #sitePopupsTableBody tr.site-popup-select-row td.site-popup-actions-cell {
+      cursor: default;
+    }
+    @media (max-width: 991.98px) {
+      #calendar-container.admin-layout-visible {
+        flex-direction: column;
+      }
+      .admin-sidebar {
+        flex: none;
+        width: 100%;
+        position: relative;
+        top: 0;
+        margin-bottom: 16px;
+      }
+      .admin-sidebar-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .admin-nav-btn { flex: 1 1 auto; min-width: 140px; }
+      .admin-main { padding-left: 0; }
+    }
 
     /* 4. FullCalendar 디자인 오버라이드 */
     .fc-daygrid-day-number { color: #444 !important; text-decoration: none !important; font-weight: 600; padding: 8px !important; }
@@ -53,9 +180,47 @@
     .fc-button-primary { background-color: white !important; border: 1px solid #ddd !important; color: #555 !important; font-weight: 600 !important; text-transform: capitalize !important; }
     .fc-button-active { background-color: var(--kepco-blue) !important; color: white !important; border-color: var(--kepco-blue) !important; }
     .fc-day-today { background-color: rgba(0, 71, 149, 0.03) !important; }
+    /* 월 뷰: 예약 유무와 관계없이 날짜 칸 최소 높이 통일 (약 1건 표시 때와 같은 밴드) */
+    #calendar .fc-dayGridMonth-view .fc-daygrid-day-frame {
+      min-height: 8.5rem !important;
+      max-height: none !important;
+    }
+    #calendar .fc-dayGridMonth-view .fc-daygrid-day-events {
+      min-height: 2em !important;
+    }
     .fc-event { border: none !important; padding: 3px 6px !important; border-radius: 5px !important; font-size: 0.85rem !important; font-weight: 600 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; }
 
     .admin-header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 0 5px; }
+
+    .rejected-filter-bar {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 8px 16px;
+      box-shadow: 0 1px 3px rgba(0, 71, 149, 0.06);
+    }
+    .rejected-filter-label { color: #555; font-size: 0.8125rem; letter-spacing: -0.02em; }
+    .rejected-filter-bar .form-switch .form-check-label {
+      font-size: 0.875rem;
+      color: #333;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+    }
+    .rejected-filter-bar .form-switch .form-check-input {
+      width: 2.5rem;
+      height: 1.25rem;
+      margin-top: 0.15rem;
+      cursor: pointer;
+      border-color: #c5cdd6;
+    }
+    .rejected-filter-bar .form-switch .form-check-input:checked {
+      background-color: var(--kepco-blue);
+      border-color: var(--kepco-blue);
+    }
+    .rejected-filter-bar .form-switch .form-check-input:focus {
+      box-shadow: 0 0 0 0.2rem rgba(0, 71, 149, 0.2);
+    }
 
     /* 모달 커스텀 스타일 */
     .modal-content { border-radius: 20px; border: none; }
@@ -64,6 +229,29 @@
     .detail-value { font-size: 1rem; color: #333; font-weight: 700; margin-bottom: 15px; }
     .doc-link { text-decoration: none; display: flex; align-items: center; padding: 10px; border-radius: 10px; background: #f0f4f8; color: var(--kepco-blue); font-weight: 600; font-size: 0.9rem; transition: 0.2s; }
     .doc-link:hover { background: #e2e8f0; }
+
+    #eventModal .modal-content { position: relative; }
+    #statusActionOverlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      background: rgba(255, 255, 255, 0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 20px;
+    }
+    #statusActionOverlay.d-none { display: none !important; }
+    #statusActionOverlay .status-overlay-inner {
+      text-align: center;
+      padding: 1.5rem;
+      max-width: 280px;
+    }
+    #statusActionOverlay .spinner-border {
+      width: 2.75rem;
+      height: 2.75rem;
+      border-width: 0.28rem;
+    }
   </style>
 </head>
 <body>
@@ -71,7 +259,7 @@
   <header class="top-header">
     <div class="header-left">
       <img src="https://lh3.googleusercontent.com/d/196cwAcdh72FSYj38Lj5g9mS2rSZ12vXQ" class="kepco-logo" alt="KEPCO">
-      <h1 class="system-name">자재센터 불용자재 환입차량 예약시스템</h1>
+      <h1 class="system-name"><a href="index.html" class="system-name-link">자재센터 불용자재 환입차량 예약시스템</a></h1>
     </div>
     <div>
       <a href="index.html" class="user-link">
@@ -88,20 +276,197 @@
   </div>
 
   <div id="calendar-container">
-    <div class="admin-header-area">
-      <h4 class="fw-bold m-0" style="color:var(--kepco-blue)">📅 차량 예약 통합 관리</h4>
-      <div class="d-flex gap-2">
-        <span class="badge rounded-pill px-3 py-2" style="background-color: #004795">🔵 승인완료</span>
-        <span class="badge rounded-pill px-3 py-2 text-dark" style="background-color: #f39c12">🟡 승인대기</span>
-        <span class="badge rounded-pill px-3 py-2" style="background-color: #e74c3c">🔴 반려</span>
-      </div>
+    <aside class="admin-sidebar" aria-label="관리자 메뉴">
+      <div class="admin-sidebar-title">메뉴</div>
+      <nav class="admin-sidebar-nav" role="navigation">
+        <button type="button" class="admin-nav-btn is-active" data-admin-panel="calendar" id="navBtnCalendar" aria-current="page">
+          <span class="admin-nav-ico" aria-hidden="true">📅</span>
+          <span>일정 관리</span>
+        </button>
+        <button type="button" class="admin-nav-btn" data-admin-panel="companies" id="navBtnCompanies" aria-current="false">
+          <span class="admin-nav-ico" aria-hidden="true">🏢</span>
+          <span>업체 현황</span>
+        </button>
+        <button type="button" class="admin-nav-btn" data-admin-panel="blocked" id="navBtnBlocked" aria-current="false">
+          <span class="admin-nav-ico" aria-hidden="true">🚫</span>
+          <span>환입 불가일</span>
+        </button>
+        <button type="button" class="admin-nav-btn" data-admin-panel="popup" id="navBtnPopup" aria-current="false">
+          <span class="admin-nav-ico" aria-hidden="true">📢</span>
+          <span>메인 공지 팝업</span>
+        </button>
+      </nav>
+    </aside>
+
+    <div class="admin-main">
+      <section id="admin-panel-calendar" class="admin-panel is-active" aria-labelledby="admin-panel-calendar-title">
+        <div class="admin-panel-head">
+          <h2 id="admin-panel-calendar-title">일정 관리</h2>
+          <p>예약 현황 캘린더에서 승인·반려를 처리할 수 있습니다.</p>
+        </div>
+        <div class="admin-header-area flex-wrap gap-3">
+          <!-- <h4 class="fw-bold m-0 d-none d-md-block" style="color:var(--kepco-blue)">차량 예약 캘린더</h4> -->
+          <div class="d-flex flex-wrap align-items-center gap-3 ms-md-auto w-100 w-md-auto justify-content-between justify-content-md-end">
+            <button type="button" class="btn btn-outline-primary btn-sm text-nowrap" id="btnRefreshCalendar" title="예약·환입 불가일만 서버에서 다시 불러옵니다. 관리자 로그인은 유지됩니다.">
+              🔄 예약 새로고침
+            </button>
+            <div class="rejected-filter-bar d-flex align-items-center flex-wrap gap-2 gap-md-3">
+              <span class="rejected-filter-label text-nowrap">반려 예약 표시</span>
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="toggleShowRejected" aria-checked="false" aria-label="반려 예약을 캘린더에 표시">
+              </div>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <span class="badge rounded-pill px-3 py-2" style="background-color: #004795">🔵 승인완료</span>
+              <span class="badge rounded-pill px-3 py-2 text-dark" style="background-color: #f39c12">🟡 승인대기</span>
+              <span class="badge rounded-pill px-3 py-2" style="background-color: #e74c3c">🔴 반려</span>
+            </div>
+          </div>
+        </div>
+        <div id="calendar"></div>
+      </section>
+
+      <section id="admin-panel-companies" class="admin-panel" aria-labelledby="admin-panel-companies-title">
+        <div class="admin-panel-head">
+          <h2 id="admin-panel-companies-title">업체 현황</h2>
+          <p>예약 시 선택 가능한 DB 업체의 등록·활성 상태를 조회합니다. (조회 전용)</p>
+        </div>
+        <div class="card border-0 shadow-sm rounded-3 admin-companies-wrap">
+          <div class="card-body p-4">
+            <div class="row g-2 align-items-end flex-wrap mb-3">
+              <div class="col-sm-6 col-md-3">
+                <label class="form-label small text-muted mb-0">지사</label>
+                <select class="form-select form-select-sm" id="companyRegistryBranchFilter">
+                  <option value="">전체 지사</option>
+                </select>
+              </div>
+              <div class="col-sm-6 col-md-3">
+                <label class="form-label small text-muted mb-0">상태</label>
+                <select class="form-select form-select-sm" id="companyRegistryStatusFilter">
+                  <option value="all">전체</option>
+                  <option value="active" selected>활성만</option>
+                  <option value="inactive">비활성만</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small text-muted mb-0">검색 (업체명·사업자번호·대표자·주소)</label>
+                <input type="search" class="form-control form-control-sm" id="companyRegistrySearchInput" placeholder="입력 시 목록 필터" autocomplete="off">
+              </div>
+              <div class="col-md-2 text-md-end">
+                <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" id="btnCompanyRegistryRefresh">목록 새로고침</button>
+              </div>
+            </div>
+            <p class="small text-muted mb-2" id="companiesRegistryHint">목록을 불러오려면 이 메뉴를 선택하세요.</p>
+            <div class="table-responsive border rounded-2" style="max-height:min(62vh, 560px)">
+              <table class="table table-sm table-hover align-middle mb-0" id="companiesRegistryTable">
+                <thead class="table-light sticky-top">
+                  <tr>
+                    <th class="text-nowrap">순번</th>
+                    <th class="text-nowrap">지사</th>
+                    <th>업체명</th>
+                    <th class="text-nowrap">사업자번호</th>
+                    <th>대표자</th>
+                    <th>주소</th>
+                    <th class="text-nowrap">상태</th>
+                  </tr>
+                </thead>
+                <tbody id="companiesRegistryTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="admin-panel-blocked" class="admin-panel" aria-labelledby="admin-panel-blocked-title">
+        <div class="admin-panel-head">
+          <h2 id="admin-panel-blocked-title">환입 불가일</h2>
+          <p>선택한 날짜는 신규 예약이 제한됩니다. 캘린더에도 회색으로 표시됩니다.</p>
+        </div>
+        <div class="card border-0 shadow-sm rounded-3">
+          <div class="card-body p-4">
+            <p class="text-muted small mb-3">내부 일정 등으로 해당 일자 전체에 신규 예약이 불가한 날짜를 추가합니다. (이미 접수된 예약은 일정 관리에서 별도 처리)</p>
+            <div class="row g-2 align-items-end">
+              <div class="col-md-3 col-lg-2">
+                <label class="form-label small text-muted mb-0">날짜</label>
+                <input type="date" class="form-control form-control-sm" id="blockDateInput">
+              </div>
+              <div class="col-md-2 col-lg-2">
+                <button type="button" class="btn btn-sm w-100 fw-bold text-white" style="background:var(--kepco-blue);min-height:31px" id="btnAddBlockedDate">추가</button>
+              </div>
+            </div>
+            <p class="small text-muted mb-0 mt-2 d-none" id="blockAddBusyHint" role="status" aria-live="polite">등록하는 중입니다…</p>
+            <div class="mt-2">
+              <label class="form-label small text-muted mb-0">사유 (선택)</label>
+              <input type="text" class="form-control form-control-sm" id="blockReasonInput" maxlength="500" placeholder="예: 재고실사">
+            </div>
+            <div class="table-responsive mt-4 mb-0" style="max-height:min(55vh, 420px)">
+              <table class="table table-sm table-hover align-middle mb-0" id="blockedDatesTable">
+                <thead class="table-light sticky-top"><tr><th>날짜</th><th>사유</th><th></th></tr></thead>
+                <tbody id="blockedDatesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="admin-panel-popup" class="admin-panel" aria-labelledby="admin-panel-popup-title">
+        <div class="admin-panel-head">
+          <h2 id="admin-panel-popup-title">메인 공지 팝업</h2>
+          <p>메인 페이지(index)에서 위에서부터 순서대로 하나씩 표시됩니다. 목록 <strong>행을 클릭</strong>하면 아래에서 상세 내용을 편집할 수 있습니다.</p>
+        </div>
+        <div class="card border-0 shadow-sm rounded-3 mb-3">
+          <div class="card-body p-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+              <p class="text-muted small mb-0">일반 텍스트만 저장·표시됩니다.</p>
+              <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" id="btnSitePopupNew">새 팝업 추가</button>
+            </div>
+            <div class="table-responsive border rounded-2" style="max-height:min(42vh, 360px)">
+              <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light sticky-top">
+                  <tr>
+                    <th class="text-nowrap">순서</th>
+                    <th class="text-nowrap">상태</th>
+                    <th>제목</th>
+                    <th class="text-nowrap">수정일시</th>
+                    <th class="text-end text-nowrap">순서·삭제</th>
+                  </tr>
+                </thead>
+                <tbody id="sitePopupsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="card border-0 shadow-sm rounded-3 d-none" id="sitePopupEditCard">
+          <div class="card-body p-4">
+            <h3 class="h6 fw-bold mb-3" id="sitePopupEditCardTitle">팝업 추가</h3>
+            <input type="hidden" id="sitePopupEditId" value="">
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" id="sitePopupEditEnabled" checked>
+              <label class="form-check-label fw-semibold" for="sitePopupEditEnabled">메인 공지에 이 팝업 활성화</label>
+            </div>
+            <label class="form-label small text-muted mb-0">제목</label>
+            <input type="text" class="form-control form-control-sm mb-2" id="sitePopupEditTitle" maxlength="200" placeholder="예: 임시 휴무 안내">
+            <label class="form-label small text-muted mb-0">본문</label>
+            <textarea class="form-control form-control-sm mb-3" id="sitePopupEditBody" rows="8" maxlength="8000" placeholder="안내 문구를 입력하세요."></textarea>
+            <button type="button" class="btn btn-sm fw-bold text-white px-4" style="background:var(--kepco-blue)" id="btnSitePopupSave">저장</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-1" id="btnSitePopupCancel">취소</button>
+            <span class="small text-muted ms-2" id="sitePopupSaveHint"></span>
+            <p class="small text-primary mb-0 mt-2 d-none" id="sitePopupSaveBusyHint" role="status" aria-live="polite">저장하는 중입니다…</p>
+          </div>
+        </div>
+      </section>
     </div>
-    <div id='calendar'></div>
   </div>
 
   <div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content shadow-lg">
+        <div id="statusActionOverlay" class="status-action-overlay d-none" aria-live="polite" aria-busy="false">
+          <div class="status-overlay-inner">
+            <div class="spinner-border text-primary mb-3" role="status" aria-label="처리 중"></div>
+            <div id="statusActionOverlayText" class="small fw-semibold text-secondary lh-sm">처리 중입니다…</div>
+          </div>
+        </div>
         <div class="modal-header border-0">
           <h5 class="modal-title fw-bold text-primary" id="modalTitle">상세 예약 정보</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -109,24 +474,52 @@
         <div class="modal-body p-4" id="modalBody">
           <div class="row">
             <div class="col-6">
+              <div class="detail-label">지사명</div>
+              <div class="detail-value" id="viewBranchName">-</div>
+            </div>
+            <div class="col-6">
+              <div class="detail-label">업체명</div>
+              <div class="detail-value" id="viewCompanyName">-</div>
+            </div>
+            <div class="col-6">
               <div class="detail-label">방문 시간</div>
               <div class="detail-value" id="viewTime">-</div>
+            </div>
+            <div class="col-6">
+              <div class="detail-label">예약 소요</div>
+              <div class="detail-value" id="viewDuration">-</div>
+            </div>
+            <div class="col-6">
+              <div class="detail-label">차량 중량</div>
+              <div class="detail-value" id="viewVehicleTonnage">-</div>
+            </div>
+            <div class="col-6">
+              <div class="detail-label">차량 대수</div>
+              <div class="detail-value" id="viewVehicleCount">-</div>
             </div>
             <div class="col-6">
               <div class="detail-label">상태</div>
               <div class="detail-value"><span class="badge" id="viewStatus">-</span></div>
             </div>
-            <div class="col-12">
+            <div class="col-6">
+              <div class="detail-label">안내 메일</div>
+              <div class="detail-value" id="viewMailSent">-</div>
+            </div>
+            <div class="col-6">
               <div class="detail-label">차량 정보</div>
-              <div class="detail-value" id="viewCars">-</div>
+              <div class="detail-value text-break" id="viewCars">-</div>
             </div>
             <div class="col-12">
               <div class="detail-label">환입 자재 내역</div>
               <div class="detail-value" id="viewMaterial">-</div>
             </div>
             <div class="col-6">
-              <div class="detail-label">신청자 연락처</div>
+              <div class="detail-label">실 방문자 연락처</div>
               <div class="detail-value" id="viewContact">-</div>
+            </div>
+            <div class="col-6">
+              <div class="detail-label">이메일 주소</div>
+              <div class="detail-value" id="viewVisitorEmail">-</div>
             </div>
             <div class="col-6">
               <div class="detail-label">출입 인원</div>
@@ -143,7 +536,7 @@
             <button type="button" id="btnApprove" class="btn btn-primary w-100 fw-bold py-2">승인</button>
             <button type="button" id="btnReject" class="btn btn-outline-danger w-100 fw-bold py-2">반려</button>
           </div>
-          <button type="button" class="btn btn-secondary w-100 fw-bold py-2 mt-2" data-bs-dismiss="modal">닫기</button>
+          <button type="button" id="btnModalFooterClose" class="btn btn-secondary w-100 fw-bold py-2 mt-2" data-bs-dismiss="modal">닫기</button>
         </div>
       </div>
     </div>
@@ -155,6 +548,15 @@
     const resModal = new bootstrap.Modal(document.getElementById('eventModal'));
     var sbClient = null;
     var currentEvent = null;
+    var calendarInstance = null;
+    /** false면 반려 건은 캘린더에서 제외(기본), true면 반려 건도 표시 */
+    var showRejectedReservations = false;
+    /** 로그인 성공 후에만 설정됨. 브라우저 메모리에만 있으며 config.js에 없음 (ADMIN_NOTIFY_SECRET 과 동일 문자열) */
+    var adminNotifySecretSession = null;
+    /** 업체 현황 패널용 (전체 행 캐시) */
+    var companiesRegistryRaw = [];
+    var companiesRegistryLoaded = false;
+    var sitePopupsCache = [];
 
     function getSupabase() {
       if (!sbClient) {
@@ -166,6 +568,38 @@
       return sbClient;
     }
 
+    /** functions.invoke 실패 시 응답 본문까지 표시( Response는 한 번만 읽음 ) */
+    async function formatEdgeInvokeError(err) {
+      if (!err) return '';
+      var base = err.message || String(err);
+      var st = null;
+      try {
+        if (err.context && typeof err.context.status === 'number') st = err.context.status;
+      } catch (e0) {}
+      if (st != null) base = 'HTTP ' + st + ' — ' + base;
+      try {
+        var ctx = err.context;
+        if (ctx && typeof ctx.text === 'function') {
+          var raw = (await ctx.text()).trim();
+          if (raw) {
+            try {
+              var j = JSON.parse(raw);
+              if (j && typeof j === 'object') {
+                var parts = [];
+                if (j.error != null) parts.push(String(j.error));
+                if (j.detail != null && String(j.detail) !== String(j.error)) parts.push(String(j.detail));
+                if (j.reason != null) parts.push(String(j.reason));
+                if (parts.length) return base + '\n' + parts.join('\n').slice(0, 500);
+              }
+            } catch (pe) {
+              return base + '\n' + raw.slice(0, 400);
+            }
+          }
+        }
+      } catch (e1) { /* 응답 본문 없음 */ }
+      return base.slice(0, 500);
+    }
+
     function formatPhoneNumber(num) {
       if (!num) return "-";
       const cleaned = ('' + num).replace(/\D/g, '');
@@ -174,23 +608,771 @@
       return num;
     }
 
-    function attemptLogin() {
-      if (typeof ADMIN_PASSWORD === 'undefined') {
-        alert('config.js가 로드되지 않았거나 ADMIN_PASSWORD가 없습니다. 같은 폴더에 config.js가 있는지 확인해 주세요.');
+    /** FullCalendar event.startStr(ISO) → 예: 2026년 4월 6일 (월) 09:00 */
+    function formatVisitDateTime(startStr) {
+      if (!startStr) return '-';
+      var tIdx = startStr.indexOf('T');
+      if (tIdx < 0) return startStr;
+      var datePart = startStr.slice(0, tIdx);
+      var rest = startStr.slice(tIdx + 1);
+      var timeMatch = rest.match(/^(\d{2}:\d{2})/);
+      var timeStr = timeMatch ? timeMatch[1] : rest.substring(0, 5);
+      var segs = datePart.split('-');
+      var y = parseInt(segs[0], 10);
+      var m = parseInt(segs[1], 10);
+      var d = parseInt(segs[2], 10);
+      if (!y || !m || !d) return datePart + ' ' + timeStr;
+      var dt = new Date(y, m - 1, d);
+      var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+      var wd = weekdays[dt.getDay()];
+      return y + '년 ' + m + '월 ' + d + '일 (' + wd + ') ' + timeStr;
+    }
+
+    function setStatusActionLoading(on, message) {
+      var ov = document.getElementById('statusActionOverlay');
+      var txt = document.getElementById('statusActionOverlayText');
+      if (txt && message) txt.textContent = message;
+      if (ov) {
+        ov.classList.toggle('d-none', !on);
+        ov.setAttribute('aria-busy', on ? 'true' : 'false');
+      }
+      var headerClose = document.querySelector('#eventModal .btn-close');
+      var approveBtn = document.getElementById('btnApprove');
+      var rejectBtn = document.getElementById('btnReject');
+      var footerClose = document.getElementById('btnModalFooterClose');
+      if (on) {
+        if (approveBtn) approveBtn.disabled = true;
+        if (rejectBtn) rejectBtn.disabled = true;
+        if (footerClose) footerClose.disabled = true;
+        if (headerClose) {
+          headerClose.disabled = true;
+          headerClose.style.opacity = '0.35';
+        }
+      } else {
+        if (footerClose) footerClose.disabled = false;
+        if (headerClose) {
+          headerClose.disabled = false;
+          headerClose.style.opacity = '';
+        }
+        var stEl = document.getElementById('viewStatus');
+        var st = stEl ? stEl.innerText.trim() : '';
+        if (approveBtn) approveBtn.disabled = (st === '승인');
+        if (rejectBtn) rejectBtn.disabled = (st === '반려');
+      }
+    }
+
+    async function attemptLogin() {
+      const pw = (document.getElementById('adminPw').value || '').trim();
+      if (!pw) {
+        alert('암호를 입력해 주세요.');
         return;
       }
-      const pw = document.getElementById('adminPw').value;
-      if (pw === ADMIN_PASSWORD) {
+      try {
+        const sb = getSupabase();
+        const { data, error } = await sb.functions.invoke('verify-admin-password', {
+          body: { password: pw },
+        });
+        var http401 = error && error.context && typeof error.context.status === 'number' && error.context.status === 401;
+        var bodyUnauthorized = data && data.ok === false && data.error === 'Unauthorized';
+        if (http401 || bodyUnauthorized) {
+          alert('암호가 일치하지 않습니다.');
+          return;
+        }
+        if (error) {
+          alert('인증 요청 실패: ' + (error.message || error) + '\n\nEdge Function `verify-admin-password` 배포 및 Secrets `ADMIN_NOTIFY_SECRET` 설정을 확인해 주세요.');
+          return;
+        }
+        if (!data || !data.ok) {
+          alert('암호가 일치하지 않습니다.');
+          return;
+        }
+        adminNotifySecretSession = pw;
+        document.getElementById('adminPw').value = '';
         document.getElementById('login-box').style.display = 'none';
-        document.getElementById('calendar-container').style.display = 'block';
+        var appEl = document.getElementById('calendar-container');
+        appEl.classList.add('admin-layout-visible');
         try {
           initCalendar();
+          setAdminPanel('calendar');
+          loadAdminPublicSettingsPanel();
         } catch (e) {
           alert('캘린더 로드 오류: ' + (e.message || e));
         }
-      } else {
-        alert("암호가 일치하지 않습니다.");
+      } catch (e) {
+        alert('인증 중 오류: ' + (e.message || e));
       }
+    }
+
+    function setAdminPanel(panelId) {
+      document.querySelectorAll('.admin-nav-btn').forEach(function (b) {
+        var active = b.getAttribute('data-admin-panel') === panelId;
+        b.classList.toggle('is-active', active);
+        b.setAttribute('aria-current', active ? 'page' : 'false');
+      });
+      document.querySelectorAll('.admin-panel').forEach(function (p) {
+        var show = p.id === 'admin-panel-' + panelId;
+        p.classList.toggle('is-active', show);
+      });
+      if (panelId === 'calendar' && calendarInstance) {
+        requestAnimationFrame(function () {
+          try {
+            calendarInstance.updateSize();
+          } catch (e) {}
+        });
+      }
+      if (panelId === 'companies') {
+        ensureCompaniesRegistryLoaded();
+      }
+      if (panelId === 'popup') {
+        loadSitePopupsTable();
+      }
+    }
+
+    async function loadAdminPublicSettingsPanel() {
+      try {
+        const sb = getSupabase();
+        const blkRes = await sb
+          .from('global_blocked_dates')
+          .select('id, blocked_date, reason')
+          .order('blocked_date', { ascending: false })
+          .limit(300);
+        if (blkRes.error) throw blkRes.error;
+        renderBlockedDatesTableRows(blkRes.data || []);
+        await loadSitePopupsTable();
+      } catch (e) {
+        console.warn(e);
+        alert('관리 패널(불가일) 데이터를 불러오지 못했습니다. 마이그레이션·RLS를 확인해 주세요.\n' + (e.message || e));
+      }
+    }
+
+    function formatPopupUpdatedAt(iso) {
+      if (iso == null || String(iso).trim() === '') return '—';
+      try {
+        var d = new Date(String(iso));
+        if (Number.isNaN(d.getTime())) return String(iso).substring(0, 16);
+        return d.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' });
+      } catch (e) {
+        return '—';
+      }
+    }
+
+    function renderSitePopupsTableRows(rows) {
+      var tb = document.getElementById('sitePopupsTableBody');
+      if (!tb) return;
+      tb.innerHTML = '';
+      if (!rows.length) {
+        var tr0 = document.createElement('tr');
+        tr0.innerHTML =
+          '<td colspan="5" class="text-muted small">등록된 팝업이 없습니다. 「새 팝업 추가」로 등록하거나, DB에 <code>site_popups</code> 테이블 마이그레이션을 적용했는지 확인하세요.</td>';
+        tb.appendChild(tr0);
+        return;
+      }
+      rows.forEach(function (row, idx) {
+        var tr = document.createElement('tr');
+        var id = row.id != null ? String(row.id) : '';
+        var en = row.is_enabled === true;
+        var tit = row.title != null ? String(row.title) : '';
+        var titShort = tit.length > 48 ? tit.substring(0, 48) + '…' : tit;
+        var uat = formatPopupUpdatedAt(row.updated_at);
+        tr.innerHTML =
+          '<td class="small text-muted text-nowrap">' +
+          (idx + 1) +
+          '</td>' +
+          '<td class="small text-nowrap">' +
+          (en
+            ? '<span class="small fw-semibold text-nowrap" style="color:#0f3d6b">활성화</span>'
+            : '<span class="small fw-semibold text-muted text-nowrap">비활성화</span>') +
+          '</td>' +
+          '<td class="small" title="' +
+          escapeAttr(tit) +
+          '">' +
+          escapeHtml(titShort || '(제목 없음)') +
+          '</td>' +
+          '<td class="small text-nowrap text-muted">' +
+          escapeHtml(uat) +
+          '</td>' +
+          '<td class="text-end text-nowrap site-popup-actions-cell">' +
+          '<button type="button" class="btn btn-link btn-sm p-0 me-1 site-popup-move" data-dir="-1" data-id="' +
+          escapeAttr(id) +
+          '" title="위로">↑</button>' +
+          '<button type="button" class="btn btn-link btn-sm p-0 me-1 site-popup-move" data-dir="1" data-id="' +
+          escapeAttr(id) +
+          '" title="아래로">↓</button>' +
+          '<button type="button" class="btn btn-link btn-sm text-danger p-0 site-popup-del" data-id="' +
+          escapeAttr(id) +
+          '">삭제</button>' +
+          '</td>';
+        tr.classList.add('site-popup-select-row');
+        tr.setAttribute('data-popup-id', id);
+        tr.setAttribute('title', '행 클릭 시 상세 편집');
+        tr.addEventListener('click', function () {
+          openSitePopupEditForm(tr.getAttribute('data-popup-id'));
+        });
+        var actTd = tr.querySelector('.site-popup-actions-cell');
+        if (actTd) {
+          actTd.addEventListener('click', function (e) {
+            e.stopPropagation();
+          });
+        }
+        tb.appendChild(tr);
+      });
+      tb.querySelectorAll('.site-popup-move').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          moveSitePopupRow(btn.getAttribute('data-id'), parseInt(btn.getAttribute('data-dir') || '0', 10));
+        });
+      });
+      tb.querySelectorAll('.site-popup-del').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          deleteSitePopupRow(btn.getAttribute('data-id'));
+        });
+      });
+    }
+
+    async function loadSitePopupsTable() {
+      var tb = document.getElementById('sitePopupsTableBody');
+      try {
+        const sb = getSupabase();
+        const r = await sb
+          .from('site_popups')
+          .select('id, is_enabled, title, body, sort_order, updated_at')
+          .order('sort_order', { ascending: true })
+          .order('id', { ascending: true })
+          .limit(100);
+        if (r.error) throw r.error;
+        sitePopupsCache = r.data || [];
+        renderSitePopupsTableRows(sitePopupsCache);
+      } catch (e) {
+        console.warn(e);
+        sitePopupsCache = [];
+        if (tb) {
+          tb.innerHTML =
+            '<tr><td colspan="5" class="text-danger small">팝업 목록을 불러오지 못했습니다. SQL 마이그레이션 <code>supabase_migration_site_popups_multi.sql</code> 적용 후 다시 시도해 주세요.<br>' +
+            escapeHtml(String(e.message || e)) +
+            '</td></tr>';
+        }
+      }
+    }
+
+    function setSitePopupEditCardVisible(show) {
+      var card = document.getElementById('sitePopupEditCard');
+      if (card) card.classList.toggle('d-none', !show);
+    }
+
+    function resetSitePopupEditForm() {
+      var hid = document.getElementById('sitePopupEditId');
+      var pe = document.getElementById('sitePopupEditEnabled');
+      var pt = document.getElementById('sitePopupEditTitle');
+      var pb = document.getElementById('sitePopupEditBody');
+      var ht = document.getElementById('sitePopupEditCardTitle');
+      if (hid) hid.value = '';
+      if (pe) pe.checked = true;
+      if (pt) pt.value = '';
+      if (pb) pb.value = '';
+      if (ht) ht.textContent = '팝업 추가';
+    }
+
+    function openSitePopupEditForm(id) {
+      resetSitePopupEditForm();
+      var hid = document.getElementById('sitePopupEditId');
+      var pe = document.getElementById('sitePopupEditEnabled');
+      var pt = document.getElementById('sitePopupEditTitle');
+      var pb = document.getElementById('sitePopupEditBody');
+      var ht = document.getElementById('sitePopupEditCardTitle');
+      if (id != null && String(id).trim() !== '') {
+        var row = sitePopupsCache.find(function (r) {
+          return String(r.id) === String(id);
+        });
+        if (row) {
+          if (hid) hid.value = String(row.id);
+          if (pe) pe.checked = row.is_enabled === true;
+          if (pt) pt.value = row.title != null ? String(row.title) : '';
+          if (pb) pb.value = row.body != null ? String(row.body) : '';
+          if (ht) ht.textContent = '팝업 편집';
+        }
+      }
+      setSitePopupEditCardVisible(true);
+      var card = document.getElementById('sitePopupEditCard');
+      if (card && typeof card.scrollIntoView === 'function') {
+        requestAnimationFrame(function () {
+          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
+    }
+
+    async function invokeSitePopupReorder(ids) {
+      if (!adminNotifySecretSession) {
+        alert('관리자 세션이 없습니다. 다시 로그인해 주세요.');
+        return false;
+      }
+      const sb = getSupabase();
+      const { data, error } = await sb.functions.invoke('admin-manage-public-settings', {
+        body: { action: 'popup_reorder', ids: ids, admin_secret: adminNotifySecretSession }
+      });
+      if (error) {
+        alert('순서 저장 실패: ' + (error.message || error));
+        return false;
+      }
+      if (!data || !data.ok) {
+        alert('순서 저장 실패: ' + (data && data.error ? data.error : '알 수 없는 오류'));
+        return false;
+      }
+      return true;
+    }
+
+    async function moveSitePopupRow(idStr, dir) {
+      var ids = sitePopupsCache.map(function (r) {
+        return r.id;
+      });
+      var ix = ids.findIndex(function (x) {
+        return String(x) === String(idStr);
+      });
+      var j = ix + dir;
+      if (ix < 0 || j < 0 || j >= ids.length) return;
+      var next = ids.slice();
+      var t = next[ix];
+      next[ix] = next[j];
+      next[j] = t;
+      var ok = await invokeSitePopupReorder(next);
+      if (ok) await loadSitePopupsTable();
+    }
+
+    function setSitePopupSaveUiBusy(isBusy) {
+      var saveBtn = document.getElementById('btnSitePopupSave');
+      var cancelBtn = document.getElementById('btnSitePopupCancel');
+      var newBtn = document.getElementById('btnSitePopupNew');
+      var pe = document.getElementById('sitePopupEditEnabled');
+      var pt = document.getElementById('sitePopupEditTitle');
+      var pb = document.getElementById('sitePopupEditBody');
+      var busyHint = document.getElementById('sitePopupSaveBusyHint');
+      var tb = document.getElementById('sitePopupsTableBody');
+      if (saveBtn) {
+        saveBtn.disabled = !!isBusy;
+        saveBtn.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+        if (isBusy) {
+          saveBtn.innerHTML =
+            '<span class="spinner-border spinner-border-sm me-1 align-middle" role="status" aria-hidden="true"></span>' +
+            '<span class="align-middle">저장 중…</span>';
+        } else {
+          saveBtn.textContent = '저장';
+        }
+      }
+      if (cancelBtn) cancelBtn.disabled = !!isBusy;
+      if (newBtn) newBtn.disabled = !!isBusy;
+      if (pe) pe.disabled = !!isBusy;
+      if (pt) pt.disabled = !!isBusy;
+      if (pb) pb.disabled = !!isBusy;
+      if (busyHint) busyHint.classList.toggle('d-none', !isBusy);
+      if (tb) {
+        tb.querySelectorAll('button').forEach(function (b) {
+          b.disabled = !!isBusy;
+        });
+      }
+    }
+
+    async function deleteSitePopupRow(idStr) {
+      if (!idStr || !confirm('이 팝업을 삭제할까요?')) return;
+      if (!adminNotifySecretSession) {
+        alert('관리자 세션이 없습니다. 다시 로그인해 주세요.');
+        return;
+      }
+      try {
+        const sb = getSupabase();
+        const { data, error } = await sb.functions.invoke('admin-manage-public-settings', {
+          body: { action: 'popup_delete', id: idStr, admin_secret: adminNotifySecretSession }
+        });
+        if (error) {
+          alert('삭제 실패: ' + (error.message || error));
+          return;
+        }
+        if (!data || !data.ok) {
+          alert('삭제 실패: ' + (data && data.error ? data.error : '알 수 없는 오류'));
+          return;
+        }
+        await loadSitePopupsTable();
+      } catch (e) {
+        alert('삭제 중 오류: ' + (e.message || e));
+      }
+    }
+
+    async function onSaveSitePopupFormClick() {
+      var hint = document.getElementById('sitePopupSaveHint');
+      if (hint) hint.textContent = '';
+      if (!adminNotifySecretSession) {
+        alert('관리자 세션이 없습니다. 다시 로그인해 주세요.');
+        return;
+      }
+      var hid = document.getElementById('sitePopupEditId');
+      var pe = document.getElementById('sitePopupEditEnabled');
+      var pt = document.getElementById('sitePopupEditTitle');
+      var pb = document.getElementById('sitePopupEditBody');
+      var idVal = hid && hid.value ? hid.value.trim() : '';
+      setSitePopupSaveUiBusy(true);
+      try {
+        const sb = getSupabase();
+        const body = {
+          action: 'popup_save',
+          is_enabled: !!(pe && pe.checked),
+          title: pt ? pt.value : '',
+          body: pb ? pb.value : ''
+        };
+        if (idVal) body.id = idVal;
+        body.admin_secret = adminNotifySecretSession;
+        const { data, error } = await sb.functions.invoke('admin-manage-public-settings', {
+          body: body
+        });
+        if (error) {
+          alert('저장 실패: ' + (error.message || error));
+          return;
+        }
+        if (!data || !data.ok) {
+          alert('저장 실패: ' + (data && data.error ? data.error : '알 수 없는 오류'));
+          return;
+        }
+        if (hint) hint.textContent = '저장됨';
+        setTimeout(function () {
+          if (hint) hint.textContent = '';
+        }, 2500);
+        await loadSitePopupsTable();
+        setSitePopupEditCardVisible(false);
+        resetSitePopupEditForm();
+      } catch (e) {
+        alert('저장 중 오류: ' + (e.message || e));
+      } finally {
+        setSitePopupSaveUiBusy(false);
+      }
+    }
+
+    function onSitePopupNewClick() {
+      resetSitePopupEditForm();
+      setSitePopupEditCardVisible(true);
+      var card = document.getElementById('sitePopupEditCard');
+      if (card && typeof card.scrollIntoView === 'function') {
+        requestAnimationFrame(function () {
+          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
+    }
+
+    function onSitePopupCancelClick() {
+      setSitePopupEditCardVisible(false);
+      resetSitePopupEditForm();
+    }
+
+    function renderBlockedDatesTableRows(rows) {
+      var tb = document.getElementById('blockedDatesTableBody');
+      if (!tb) return;
+      tb.innerHTML = '';
+      if (!rows.length) {
+        var tr0 = document.createElement('tr');
+        tr0.innerHTML = '<td colspan="3" class="text-muted small">등록된 불가일이 없습니다.</td>';
+        tb.appendChild(tr0);
+        return;
+      }
+      rows.forEach(function (row) {
+        var tr = document.createElement('tr');
+        var d = row.blocked_date != null ? String(row.blocked_date).substring(0, 10) : '';
+        var rs = row.reason != null ? String(row.reason) : '';
+        var id = row.id != null ? String(row.id) : '';
+        tr.innerHTML =
+          '<td class="small text-nowrap">' + escapeHtml(d) + '</td>' +
+          '<td class="small text-truncate" style="max-width:200px" title="' + escapeAttr(rs) + '">' + escapeHtml(rs || '—') + '</td>' +
+          '<td class="text-end"><button type="button" class="btn btn-link btn-sm text-danger p-0 btn-remove-block" data-id="' + escapeAttr(id) + '" data-scope="global">삭제</button></td>';
+        tb.appendChild(tr);
+      });
+      tb.querySelectorAll('.btn-remove-block').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          removeBlockedDateRow(btn.getAttribute('data-id'), btn.getAttribute('data-scope') || 'global');
+        });
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function escapeAttr(s) {
+      return escapeHtml(s).replace(/'/g, '&#39;');
+    }
+
+    async function loadCompaniesRegistryFromDb() {
+      const sb = getSupabase();
+      const [brRes, coRes] = await Promise.all([
+        sb.from('branches').select('id,name').eq('is_active', true).order('sort_order', { ascending: true }),
+        sb
+          .from('companies')
+          .select('id, branch_id, name, business_registration_no, representative_name, address, is_active, sort_order, branches(name)')
+          .order('branch_id', { ascending: true })
+          .order('sort_order', { ascending: true })
+          .order('name', { ascending: true })
+          .limit(5000)
+      ]);
+      if (brRes.error) throw brRes.error;
+      if (coRes.error) throw coRes.error;
+      companiesRegistryRaw = coRes.data || [];
+      var filt = document.getElementById('companyRegistryBranchFilter');
+      if (filt) {
+        var cur = filt.value;
+        filt.innerHTML = '<option value="">전체 지사</option>';
+        (brRes.data || []).forEach(function (b) {
+          var o = document.createElement('option');
+          o.value = String(b.id);
+          o.textContent = b.name != null ? String(b.name) : String(b.id);
+          filt.appendChild(o);
+        });
+        var found = false;
+        for (var i = 0; i < filt.options.length; i++) {
+          if (filt.options[i].value === cur) {
+            found = true;
+            break;
+          }
+        }
+        if (found) filt.value = cur;
+      }
+    }
+
+    function renderCompaniesRegistryTable() {
+      var tb = document.getElementById('companiesRegistryTableBody');
+      var hint = document.getElementById('companiesRegistryHint');
+      if (!tb) return;
+      var brEl = document.getElementById('companyRegistryBranchFilter');
+      var stEl = document.getElementById('companyRegistryStatusFilter');
+      var qEl = document.getElementById('companyRegistrySearchInput');
+      var branchVal = brEl && brEl.value ? brEl.value : '';
+      var statusVal = stEl && stEl.value ? stEl.value : 'all';
+      var q = qEl && qEl.value ? String(qEl.value).trim().toLowerCase() : '';
+
+      var rows = companiesRegistryRaw.filter(function (row) {
+        if (branchVal && String(row.branch_id) !== branchVal) return false;
+        if (statusVal === 'active' && row.is_active === false) return false;
+        if (statusVal === 'inactive' && row.is_active !== false) return false;
+        if (!q) return true;
+        var parts = [
+          row.name,
+          row.business_registration_no,
+          row.representative_name,
+          row.address,
+          row.branches && row.branches.name
+        ];
+        var hay = parts
+          .map(function (x) {
+            return x != null ? String(x).toLowerCase() : '';
+          })
+          .join(' ');
+        return hay.indexOf(q) !== -1;
+      });
+
+      tb.innerHTML = '';
+      if (hint) {
+        hint.textContent =
+          '전체 ' + companiesRegistryRaw.length + '건 · 조건에 맞게 표시 ' + rows.length + '건';
+      }
+      if (!rows.length) {
+        var tr0 = document.createElement('tr');
+        tr0.innerHTML =
+          '<td colspan="7" class="text-muted small text-center py-4">조건에 맞는 업체가 없습니다.</td>';
+        tb.appendChild(tr0);
+        return;
+      }
+      rows.forEach(function (row, idx) {
+        var tr = document.createElement('tr');
+        var bnm = row.branches && row.branches.name ? String(row.branches.name) : '#' + row.branch_id;
+        var stHtml =
+          row.is_active === false
+            ? '<span class="badge bg-secondary">비활성</span>'
+            : '<span class="badge" style="background:#004795">활성</span>';
+        var brn = row.business_registration_no != null ? String(row.business_registration_no) : '—';
+        var rep = row.representative_name != null ? String(row.representative_name) : '—';
+        var addr = row.address != null ? String(row.address) : '—';
+        var nm = row.name != null ? String(row.name) : '—';
+        tr.innerHTML =
+          '<td class="text-muted small text-nowrap">' +
+          escapeHtml(String(idx + 1)) +
+          '</td>' +
+          '<td class="text-nowrap">' +
+          escapeHtml(bnm) +
+          '</td>' +
+          '<td class="fw-semibold">' +
+          escapeHtml(nm) +
+          '</td>' +
+          '<td class="text-nowrap">' +
+          escapeHtml(brn) +
+          '</td>' +
+          '<td><span class="cell-truncate d-inline-block" title="' +
+          escapeAttr(rep) +
+          '">' +
+          escapeHtml(rep) +
+          '</span></td>' +
+          '<td><span class="cell-truncate cell-truncate-wide d-inline-block" title="' +
+          escapeAttr(addr) +
+          '">' +
+          escapeHtml(addr) +
+          '</span></td>' +
+          '<td class="text-nowrap">' +
+          stHtml +
+          '</td>';
+        tb.appendChild(tr);
+      });
+    }
+
+    async function ensureCompaniesRegistryLoaded() {
+      if (!companiesRegistryLoaded) {
+        var hint = document.getElementById('companiesRegistryHint');
+        if (hint) hint.textContent = '목록을 불러오는 중…';
+        try {
+          await loadCompaniesRegistryFromDb();
+          companiesRegistryLoaded = true;
+        } catch (e) {
+          if (hint) hint.textContent = '불러오기 실패';
+          alert('업체 목록을 불러오지 못했습니다: ' + (e.message || e));
+          return;
+        }
+      }
+      renderCompaniesRegistryTable();
+    }
+
+    async function refreshCompaniesRegistry() {
+      var hint = document.getElementById('companiesRegistryHint');
+      if (hint) hint.textContent = '새로고침 중…';
+      try {
+        await loadCompaniesRegistryFromDb();
+        companiesRegistryLoaded = true;
+        renderCompaniesRegistryTable();
+      } catch (e) {
+        if (hint) hint.textContent = '불러오기 실패';
+        alert('업체 목록을 불러오지 못했습니다: ' + (e.message || e));
+      }
+    }
+
+    async function removeBlockedDateRow(id, blockedScope, skipConfirm) {
+      var scope = blockedScope === 'branch' ? 'branch' : 'global';
+      if (!id) return;
+      if (!skipConfirm) {
+        var q =
+          scope === 'global'
+            ? '해당 환입 불가일을 삭제할까요?'
+            : '해당 지사별 환입 불가일을 삭제할까요?';
+        if (!window.confirm(q)) return;
+      }
+      if (!adminNotifySecretSession) {
+        alert('관리자 세션이 없습니다. 다시 로그인해 주세요.');
+        return;
+      }
+      try {
+        const sb = getSupabase();
+        const { data, error } = await sb.functions.invoke('admin-manage-public-settings', {
+          body: {
+            action: 'blocked_delete',
+            id: id,
+            blocked_scope: scope,
+            admin_secret: adminNotifySecretSession
+          }
+        });
+        if (error) {
+          alert('삭제 요청 실패: ' + (error.message || error));
+          return;
+        }
+        if (!data || !data.ok) {
+          alert('삭제 실패: ' + (data && data.error ? data.error : '알 수 없는 오류'));
+          return;
+        }
+        if (scope === 'global') {
+          const r2 = await sb.from('global_blocked_dates').select('id, blocked_date, reason').order('blocked_date', { ascending: false }).limit(300);
+          if (r2.error) throw r2.error;
+          renderBlockedDatesTableRows(r2.data || []);
+        }
+        if (calendarInstance) calendarInstance.refetchEvents();
+      } catch (e) {
+        alert('삭제 중 오류: ' + (e.message || e));
+      }
+    }
+
+    function setBlockedDateAddUiBusy(isBusy) {
+      var btn = document.getElementById('btnAddBlockedDate');
+      var di = document.getElementById('blockDateInput');
+      var ri = document.getElementById('blockReasonInput');
+      var hint = document.getElementById('blockAddBusyHint');
+      if (btn) {
+        btn.disabled = !!isBusy;
+        btn.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+        if (isBusy) {
+          btn.innerHTML =
+            '<span class="spinner-border spinner-border-sm me-1 align-middle" role="status" aria-hidden="true"></span>' +
+            '<span class="align-middle">등록 중…</span>';
+        } else {
+          btn.textContent = '추가';
+        }
+      }
+      if (di) di.disabled = !!isBusy;
+      if (ri) ri.disabled = !!isBusy;
+      if (hint) hint.classList.toggle('d-none', !isBusy);
+    }
+
+    async function onAddBlockedDateClick() {
+      var di = document.getElementById('blockDateInput');
+      var ri = document.getElementById('blockReasonInput');
+      var dval = di && di.value ? di.value.trim() : '';
+      var reason = ri && ri.value ? ri.value.trim() : '';
+      if (!dval) {
+        alert('날짜를 선택해 주세요.');
+        return;
+      }
+      if (!adminNotifySecretSession) {
+        alert('관리자 세션이 없습니다. 다시 로그인해 주세요.');
+        return;
+      }
+      setBlockedDateAddUiBusy(true);
+      try {
+        const sb = getSupabase();
+        const { data, error } = await sb.functions.invoke('admin-manage-public-settings', {
+          body: {
+            action: 'blocked_add',
+            blocked_date: dval,
+            reason: reason || undefined,
+            admin_secret: adminNotifySecretSession
+          }
+        });
+        if (error) {
+          alert('등록 요청 실패: ' + (error.message || error) + '\n\nEdge Function `admin-manage-public-settings` 배포 및 Secrets를 확인해 주세요.');
+          return;
+        }
+        if (!data || !data.ok) {
+          alert('등록 실패: ' + (data && data.error ? data.error : '알 수 없는 오류'));
+          return;
+        }
+        const r2 = await sb.from('global_blocked_dates').select('id, blocked_date, reason').order('blocked_date', { ascending: false }).limit(300);
+        if (r2.error) throw r2.error;
+        renderBlockedDatesTableRows(r2.data || []);
+        if (di) di.value = '';
+        if (ri) ri.value = '';
+        if (calendarInstance) calendarInstance.refetchEvents();
+      } catch (e) {
+        alert('등록 중 오류: ' + (e.message || e));
+      } finally {
+        setBlockedDateAddUiBusy(false);
+      }
+    }
+
+    function resolveReservationVehicleCount(row) {
+      var v = row.vehicle_count;
+      if (v === 2 || v === '2') return 2;
+      if (v === 1 || v === '1') return 1;
+      var m = String(row.material_info || '').match(/\[차량대수:([12])대\]/);
+      if (m) return parseInt(m[1], 10) === 2 ? 2 : 1;
+      return 1;
+    }
+
+    function formatVehicleCountLabel(n) {
+      return n === 2 ? '2대' : '1대';
+    }
+
+    /** 상세·목록 표시용: 구버전 material_info 접두 [차량대수:N대] 제거 */
+    function stripLegacyVehicleCountFromMaterialInfo(text) {
+      var s = String(text || '').trim();
+      return s.replace(/^\[차량대수:[12]대\]\s*/, '');
     }
 
     function initCalendar() {
@@ -199,59 +1381,205 @@
         initialView: 'dayGridMonth',
         headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
         locale: 'ko',
+        height: 'auto',
         eventOrder: 'start',
-        dayMaxEvents: true,
+        dayMaxEvents: 7,
+        dayMaxEventRows: 7,
         events: async function(info, successCallback, failureCallback) {
-          const { data, error } = await getSupabase()
+          const sb = getSupabase();
+          let q = sb
             .from('reservations')
-            .select('id, reservation_date, reservation_time, company_name, car_number_1, car_number_2, material_info, contact, person_info, doc_url_1, doc_url_2, doc_url_3, status')
-            .neq('status', '반려');
+            .select('id, reservation_date, reservation_time, company_name, branch_id, company_id, car_number_1, car_number_2, material_info, vehicle_count, contact, visitor_email, person_info, vehicle_tonnage, reservation_duration_minutes, duration_mode, doc_url_1, doc_url_2, doc_url_3, status, status_notification_sent, branches(name), companies(name)');
+          if (!showRejectedReservations) {
+            q = q.neq('status', '반려');
+          }
+          const blkBranchQ = sb
+            .from('branch_blocked_dates')
+            .select('id, branch_id, blocked_date, reason, branches(name)')
+            .order('blocked_date', { ascending: true })
+            .limit(500);
+          const blkGlobalQ = sb
+            .from('global_blocked_dates')
+            .select('id, blocked_date, reason')
+            .order('blocked_date', { ascending: true })
+            .limit(500);
+          const [resResult, blkBranchResult, blkGlobalResult] = await Promise.all([q, blkBranchQ, blkGlobalQ]);
+          const { data, error } = resResult;
           if (error) {
             alert("데이터 로드 오류: " + error.message);
             failureCallback(error);
             return;
           }
-          const events = (data || []).map(row => {
+          if (blkBranchResult.error) {
+            console.warn(blkBranchResult.error);
+          }
+          if (blkGlobalResult.error) {
+            console.warn(blkGlobalResult.error);
+          }
+          if (!adminNotifySecretSession) {
+            alert('관리자 세션이 없습니다. 다시 로그인해 주세요.');
+            failureCallback(new Error('관리자 세션 없음'));
+            return;
+          }
+          const { data: decData, error: decErr } = await sb.functions.invoke('decrypt-reservation-pii', {
+            body: {
+              admin_secret: adminNotifySecretSession,
+              items: (data || []).map(function (row) {
+                return { contact: row.contact, visitor_email: row.visitor_email };
+              }),
+            },
+          });
+          if (decErr) {
+            alert('예약 개인정보 복호화 실패: ' + (await formatEdgeInvokeError(decErr)));
+            failureCallback(decErr);
+            return;
+          }
+          if (!decData || !decData.ok) {
+            alert('예약 개인정보 복호화 실패: ' + (decData && decData.error ? decData.error : '알 수 없는 오류'));
+            failureCallback(new Error('decrypt-reservation-pii failed'));
+            return;
+          }
+          const decItems = decData.items || [];
+          const rows = (data || []).map(function (row, idx) {
+            var pair = decItems[idx] || {};
+            return Object.assign({}, row, {
+              contact: pair.contact != null ? pair.contact : row.contact,
+              visitor_email: pair.visitor_email != null ? pair.visitor_email : row.visitor_email,
+            });
+          });
+          const events = rows.map(row => {
             const dateStr = (row.reservation_date && String(row.reservation_date).substring(0, 10)) || '';
             const timeStr = (row.reservation_time && String(row.reservation_time).trim().substring(0, 5)) || '09:00';
             const startISO = dateStr + 'T' + timeStr + ':00';
             const peopleText = row.person_info && (row.person_info.text != null ? row.person_info.text : (typeof row.person_info === 'string' ? row.person_info : JSON.stringify(row.person_info)));
+            const pi = row.person_info && typeof row.person_info === 'object' ? row.person_info : {};
+            const durMin = Number(row.reservation_duration_minutes) === 60
+              ? 60
+              : (Number(pi.reservation_duration_minutes) === 60 ? 60 : 30);
+            const durModeRaw = row.duration_mode || pi.duration_mode;
+            const durMode = durModeRaw === 'manual' ? '직접 선택' : '자동 권장';
+            const durationText = durMin + '분 (' + durMode + ')';
+            const rawTonnage = row.vehicle_tonnage != null ? Number(row.vehicle_tonnage) : Number(pi.vehicle_tonnage_ton);
+            const vehicleTonnageText = Number.isFinite(rawTonnage) ? (rawTonnage + '톤') : '-';
+            const vehicleCountN = resolveReservationVehicleCount(row);
+            const vehicleCountText = formatVehicleCountLabel(vehicleCountN);
+            var branchNm = (row.branches && row.branches.name) ? row.branches.name : null;
+            var companyNm = (row.company_name && String(row.company_name).trim()) ? row.company_name : ((row.companies && row.companies.name) ? row.companies.name : null);
             return {
               id: row.id,
-              title: row.company_name,
+              title: companyNm || row.company_name || '예약',
               start: startISO,
-              color: row.status === '승인' ? '#004795' : '#f39c12',
+              color: row.status === '승인' ? '#004795' : (row.status === '반려' ? '#e74c3c' : '#f39c12'),
               extendedProps: {
-                company: row.company_name,
+                company: companyNm || row.company_name || '-',
+                branchName: branchNm || '-',
+                companyName: companyNm || '-',
                 cars: [row.car_number_1, row.car_number_2].filter(Boolean).join(' / '),
-                material: row.material_info,
+                vehicleCountText: vehicleCountText,
+                material: stripLegacyVehicleCountFromMaterialInfo(row.material_info),
                 contact: row.contact,
+                visitorEmail: row.visitor_email || '-',
                 people: peopleText || '-',
+                duration: durationText,
+                vehicleTonnage: vehicleTonnageText,
                 status: row.status || '대기',
+                statusNotificationSent: row.status_notification_sent === true,
                 files: [row.doc_url_1, row.doc_url_2, row.doc_url_3]
               }
             };
           });
+          (blkGlobalResult.data || []).forEach(function (blk) {
+            var ds = blk.blocked_date != null ? String(blk.blocked_date).substring(0, 10) : '';
+            if (!ds || !blk.id) return;
+            var rsn = blk.reason != null ? String(blk.reason).trim() : '';
+            events.push({
+              id: 'block-g-' + String(blk.id),
+              title: '🚫 환입 불가' + (rsn ? ' · ' + rsn.slice(0, 18) + (rsn.length > 18 ? '…' : '') : ''),
+              start: ds,
+              allDay: true,
+              color: '#7f8c8d',
+              textColor: '#fff',
+              extendedProps: {
+                isBlockedDate: true,
+                blockRowId: String(blk.id),
+                blockScope: 'global',
+                branchName: '—',
+                reasonText: rsn,
+                company: '(환입 불가일)',
+                status: '불가'
+              }
+            });
+          });
+          (blkBranchResult.data || []).forEach(function (blk) {
+            var ds = blk.blocked_date != null ? String(blk.blocked_date).substring(0, 10) : '';
+            if (!ds || !blk.id) return;
+            var bnm = (blk.branches && blk.branches.name) ? blk.branches.name : ('지사 #' + blk.branch_id);
+            var rsn = blk.reason != null ? String(blk.reason).trim() : '';
+            events.push({
+              id: 'block-b-' + String(blk.id),
+              title: '🚫 ' + bnm + (rsn ? ' · ' + rsn.slice(0, 18) + (rsn.length > 18 ? '…' : '') : ''),
+              start: ds,
+              allDay: true,
+              color: '#95a5a6',
+              textColor: '#fff',
+              extendedProps: {
+                isBlockedDate: true,
+                blockRowId: String(blk.id),
+                blockScope: 'branch',
+                branchName: bnm,
+                reasonText: rsn,
+                company: '(환입 불가일·구 지사별)',
+                status: '불가'
+              }
+            });
+          });
           successCallback(events);
         },
         eventClick: function(info) {
+          const p = info.event.extendedProps || {};
+          if (p.isBlockedDate) {
+            var ds = info.event.startStr != null ? String(info.event.startStr).substring(0, 10) : '';
+            var sc = p.blockScope === 'branch' ? 'branch' : 'global';
+            var msg =
+              sc === 'global'
+                ? '해당 환입 불가일을 삭제할까요?'
+                : '[' + (p.branchName || '지사') + '] ' + ds + ' 지사별 환입 불가일을 삭제할까요?';
+            if (!window.confirm(msg)) return;
+            removeBlockedDateRow(p.blockRowId, sc, true);
+            return;
+          }
           currentEvent = info.event;
-          const p = info.event.extendedProps;
           const status = p.status || '대기';
-          const timeValue = info.event.startStr && info.event.startStr.includes('T')
-            ? info.event.startStr.split('T')[1].substring(0, 5) : '-';
           document.getElementById('modalTitle').innerText = `[${p.company}] 예약 정보`;
-          document.getElementById('viewTime').innerText = timeValue;
+          document.getElementById('viewBranchName').innerText = p.branchName || '-';
+          document.getElementById('viewCompanyName').innerText = p.companyName || p.company || '-';
+          document.getElementById('viewTime').innerText = formatVisitDateTime(info.event.startStr);
+          document.getElementById('viewDuration').innerText = p.duration || '30분 (자동 권장)';
+          document.getElementById('viewVehicleTonnage').innerText = p.vehicleTonnage || '-';
+          var vcEl = document.getElementById('viewVehicleCount');
+          if (vcEl) vcEl.innerText = p.vehicleCountText || '-';
           document.getElementById('viewCars').innerText = p.cars || '-';
           document.getElementById('viewMaterial').innerText = p.material || '-';
           document.getElementById('viewContact').innerText = formatPhoneNumber(p.contact);
+          var veEl = document.getElementById('viewVisitorEmail');
+          if (veEl) veEl.innerText = (p.visitorEmail && p.visitorEmail !== '-') ? p.visitorEmail : '-';
           document.getElementById('viewPeople').innerText = p.people || '-';
           const statusBadge = document.getElementById('viewStatus');
           statusBadge.innerText = status;
           statusBadge.className = 'badge ' + (status === '승인' ? 'bg-primary' : (status === '반려' ? 'bg-danger' : 'bg-warning text-dark'));
+          var mailSentEl = document.getElementById('viewMailSent');
+          if (mailSentEl) {
+            if (status === '승인' || status === '반려') {
+              mailSentEl.innerText = p.statusNotificationSent ? '발송 완료' : '미발송';
+              mailSentEl.style.color = p.statusNotificationSent ? '#198754' : '#856404';
+            } else {
+              mailSentEl.innerText = '—';
+              mailSentEl.style.color = '';
+            }
+          }
           const fileContainer = document.getElementById('viewFiles');
           fileContainer.innerHTML = '';
-          const fileNames = ['안전수칙 동의서 1', '안전수칙 동의서 2', '안전수칙 동의서 3'];
+          const fileNames = ['위험성 체크리스트', '안전 교육 일지', '안전수칙 준수 동의서 3(구 신청분)'];
           (p.files || []).forEach((url, idx) => {
             if (url) {
               const a = document.createElement('a');
@@ -273,28 +1601,80 @@
         }
       });
       calendar.render();
+      calendarInstance = calendar;
     }
 
     async function updateReservationStatus(newStatus, confirmText) {
       if (!currentEvent) return;
       if (!window.confirm(confirmText)) return;
 
+      setStatusActionLoading(true, '예약 상태를 변경하는 중입니다…');
       try {
         const sb = getSupabase();
-        const { error } = await sb
+        const { data: updRows, error } = await sb
           .from('reservations')
           .update({ status: newStatus })
-          .eq('id', currentEvent.id);
+          .eq('id', currentEvent.id)
+          .select('id, status');
 
         if (error) {
           alert('상태 변경 오류: ' + error.message);
           return;
         }
+        if (!updRows || !updRows.length) {
+          alert(
+            '상태가 변경되지 않았습니다. (DB에 반영된 행이 0건)\n' +
+              '예약을 다시 열어 시도하거나, 동일 브라우저에서 일반 사용자로 로그인된 경우 로그아웃 후 관리자만 사용해 보세요.'
+          );
+          return;
+        }
 
-        // 이벤트 색상 및 모달 상태 즉시 반영
-        const newColor = newStatus === '승인' ? '#004795' : (newStatus === '반려' ? '#e74c3c' : '#f39c12');
-        currentEvent.setExtendedProp('status', newStatus);
-        currentEvent.setProp('color', newColor);
+        var mailNote = '';
+        if (newStatus === '승인' || newStatus === '반려') {
+          if (!adminNotifySecretSession) {
+            mailNote = '\n\n안내 메일: 관리자 세션이 없습니다. 새로고침 후 다시 로그인해 주세요.';
+          } else {
+            setStatusActionLoading(true, '안내 메일을 발송하는 중입니다. SMTP 연결에 수십 초 걸릴 수 있습니다.');
+            var inv = await sb.functions.invoke('send-reservation-status-email', {
+              body: {
+                reservation_id: String(currentEvent.id),
+                admin_secret: adminNotifySecretSession,
+                notify_for_status: newStatus
+              }
+            });
+            if (inv.error) {
+              var em = await formatEdgeInvokeError(inv.error);
+              mailNote = '\n\n안내 메일 발송 실패: ' + em;
+            } else if (inv.data && inv.data.skipped) {
+              mailNote = '\n\n안내 메일: ' + (inv.data.reason || '건너뜀');
+              if (inv.data.db_status != null && String(inv.data.db_status) !== '') {
+                mailNote += ' [DB: ' + String(inv.data.db_status) + ']';
+              }
+            } else {
+              mailNote = '\n\n안내 메일을 발송했습니다.';
+              currentEvent.setExtendedProp('statusNotificationSent', true);
+              var vms = document.getElementById('viewMailSent');
+              if (vms) {
+                vms.innerText = '발송 완료';
+                vms.style.color = '#198754';
+              }
+            }
+          }
+        }
+
+        alert((newStatus === '승인' ? '승인되었습니다.' : (newStatus === '반려' ? '반려되었습니다.' : '처리되었습니다.')) + mailNote);
+
+        // 반려 건 숨김 모드에서 반려 처리 시 목록에서 제거되도록 갱신
+        if (calendarInstance) {
+          calendarInstance.refetchEvents();
+          if (newStatus === '반려' && !showRejectedReservations) {
+            resModal.hide();
+          }
+        } else {
+          const newColor = newStatus === '승인' ? '#004795' : (newStatus === '반려' ? '#e74c3c' : '#f39c12');
+          currentEvent.setExtendedProp('status', newStatus);
+          currentEvent.setProp('color', newColor);
+        }
 
         const statusBadge = document.getElementById('viewStatus');
         statusBadge.innerText = newStatus;
@@ -306,8 +1686,33 @@
         rejectBtn.disabled = (newStatus === '반려');
       } catch (e) {
         alert('상태 변경 중 예외가 발생했습니다: ' + (e.message || e));
+      } finally {
+        setStatusActionLoading(false);
       }
     }
+
+    function refreshAdminCalendarFromServer() {
+      if (!calendarInstance) {
+        alert('캘린더가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+      calendarInstance.refetchEvents();
+    }
+
+    var btnRefreshCal = document.getElementById('btnRefreshCalendar');
+    if (btnRefreshCal) {
+      btnRefreshCal.addEventListener('click', function () {
+        refreshAdminCalendarFromServer();
+      });
+    }
+
+    document.getElementById('toggleShowRejected').addEventListener('change', function () {
+      showRejectedReservations = this.checked;
+      this.setAttribute('aria-checked', this.checked ? 'true' : 'false');
+      if (calendarInstance) {
+        calendarInstance.refetchEvents();
+      }
+    });
 
     document.getElementById('adminPw').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') attemptLogin();
@@ -320,6 +1725,47 @@
     document.getElementById('btnReject').addEventListener('click', function () {
       updateReservationStatus('반려', '이 예약을 반려하시겠습니까?');
     });
+
+    var btnAddBlk = document.getElementById('btnAddBlockedDate');
+    if (btnAddBlk) btnAddBlk.addEventListener('click', function () { onAddBlockedDateClick(); });
+    var btnPopNew = document.getElementById('btnSitePopupNew');
+    if (btnPopNew) btnPopNew.addEventListener('click', function () { onSitePopupNewClick(); });
+    var btnPopSave = document.getElementById('btnSitePopupSave');
+    if (btnPopSave) btnPopSave.addEventListener('click', function () { onSaveSitePopupFormClick(); });
+    var btnPopCancel = document.getElementById('btnSitePopupCancel');
+    if (btnPopCancel) btnPopCancel.addEventListener('click', function () { onSitePopupCancelClick(); });
+
+    document.querySelectorAll('.admin-nav-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-admin-panel');
+        if (id) setAdminPanel(id);
+      });
+    });
+
+    var brCo = document.getElementById('companyRegistryBranchFilter');
+    var stCo = document.getElementById('companyRegistryStatusFilter');
+    var srCo = document.getElementById('companyRegistrySearchInput');
+    if (brCo) {
+      brCo.addEventListener('change', function () {
+        if (companiesRegistryLoaded) renderCompaniesRegistryTable();
+      });
+    }
+    if (stCo) {
+      stCo.addEventListener('change', function () {
+        if (companiesRegistryLoaded) renderCompaniesRegistryTable();
+      });
+    }
+    if (srCo) {
+      srCo.addEventListener('input', function () {
+        if (companiesRegistryLoaded) renderCompaniesRegistryTable();
+      });
+    }
+    var btnCoRef = document.getElementById('btnCompanyRegistryRefresh');
+    if (btnCoRef) {
+      btnCoRef.addEventListener('click', function () {
+        refreshCompaniesRegistry();
+      });
+    }
   </script>
 </body>
 </html>

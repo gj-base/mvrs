@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>회원가입 · 자재센터 불용자재 환입차량 예약시스템</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>
+    :root {
+      --signup-navy: #0a2342;
+      --signup-navy-mid: #0f3560;
+      --signup-accent: #1e6fd9;
+      --input-bg: #f4f6f9;
+      --kepco-blue: #004795;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #e8ecf2;
+      color: #1e293b;
+    }
+    .signup-topbar {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 12px 5%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .signup-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .signup-brand:hover { opacity: 0.9; color: inherit; }
+    .signup-brand img { height: 32px; }
+    .signup-brand span {
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: var(--kepco-blue);
+      letter-spacing: -0.02em;
+    }
+    .signup-nav {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .signup-nav a {
+      color: #64748b;
+      text-decoration: none;
+    }
+    .signup-nav a:hover { color: var(--kepco-blue); }
+    .signup-nav a.is-active {
+      color: var(--kepco-blue);
+      border-bottom: 2px solid var(--kepco-blue);
+      padding-bottom: 2px;
+    }
+    .signup-wrap {
+      max-width: 1040px;
+      margin: 32px auto 48px;
+      padding: 0 16px;
+    }
+    .signup-card {
+      display: grid;
+      grid-template-columns: 1fr 1.05fr;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+      min-height: 560px;
+      background: #fff;
+    }
+    @media (max-width: 900px) {
+      .signup-card { grid-template-columns: 1fr; min-height: 0; }
+    }
+    .signup-hero {
+      background: linear-gradient(155deg, var(--signup-navy) 0%, var(--signup-navy-mid) 55%, #0a2848 100%);
+      color: #fff;
+      padding: 44px 36px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .signup-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url('assets/main-img.jpg') center / cover no-repeat;
+      opacity: 0.22;
+      mix-blend-mode: luminosity;
+    }
+    .signup-hero-inner { position: relative; z-index: 1; }
+    .signup-hero-kicker {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      opacity: 0.78;
+      margin: 0 0 10px;
+    }
+    .signup-hero h2 {
+      font-size: 1.65rem;
+      font-weight: 800;
+      line-height: 1.35;
+      margin: 0 0 16px;
+      letter-spacing: -0.03em;
+    }
+    .signup-hero p {
+      font-size: 0.95rem;
+      line-height: 1.65;
+      opacity: 0.92;
+      margin: 0 0 28px;
+    }
+    .signup-hero-note {
+      font-size: 0.8rem;
+      line-height: 1.55;
+      opacity: 0.86;
+      margin: 22px 0 0;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .signup-hero-note strong { font-weight: 700; opacity: 1; }
+    .signup-hero-features {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .signup-hero-features li {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+      opacity: 0.95;
+    }
+    .signup-hero-features .fi {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .signup-form-panel {
+      padding: 40px 40px 36px;
+      background: #fff;
+    }
+    @media (max-width: 576px) {
+      .signup-form-panel { padding: 28px 20px 24px; }
+    }
+    .signup-form-panel h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 6px;
+      letter-spacing: -0.03em;
+    }
+    .signup-form-panel .subtitle {
+      font-size: 0.9rem;
+      color: #64748b;
+      margin-bottom: 28px;
+    }
+    .signup-section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: var(--signup-accent);
+      margin: 22px 0 12px;
+    }
+    .signup-section-label:first-of-type { margin-top: 0; }
+    .signup-label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .signup-input {
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      background: var(--input-bg);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 0.95rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .signup-input:focus {
+      outline: none;
+      border-color: var(--signup-accent);
+      box-shadow: 0 0 0 3px rgba(30, 111, 217, 0.15);
+      background: #fff;
+    }
+    .signup-input:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+    .signup-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 576px) {
+      .signup-row-2 { grid-template-columns: 1fr; }
+    }
+    .branch-match-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #f8fafc;
+      padding: 12px 14px;
+      min-height: 72px;
+      margin-top: 8px;
+    }
+    .branch-match-box.is-empty {
+      color: #94a3b8;
+      font-size: 0.88rem;
+    }
+    .branch-match-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 4px;
+      border-bottom: 1px solid #e8eef4;
+      font-size: 0.9rem;
+    }
+    .branch-match-item:last-child { border-bottom: none; }
+    .branch-match-item .branch-bullet {
+      flex-shrink: 0;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--signup-accent);
+      margin-top: 7px;
+    }
+    .branch-match-item .branch-text {
+      flex: 1;
+      margin: 0;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .branch-match-caption {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin: 0 0 10px;
+      font-weight: 600;
+    }
+    .lookup-company-field {
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+    }
+    .lookup-company-field .lookup-field-label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .lookup-company-field .lookup-field-value {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.45;
+      word-break: keep-all;
+    }
+    .lookup-company-field .lookup-field-value.is-multi span {
+      display: block;
+      padding: 4px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-weight: 600;
+    }
+    .lookup-company-field .lookup-field-value.is-multi span:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .lookup-branches-heading {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      margin: 0 0 6px;
+    }
+    .signup-privacy-wrap { margin-top: 22px; }
+    .signup-privacy-box {
+      font-size: 0.76rem;
+      line-height: 1.55;
+      color: #64748b;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px 14px 12px;
+    }
+    .signup-privacy-box > strong {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: #475569;
+      margin-bottom: 8px;
+    }
+    .signup-privacy-box ul {
+      margin: 0;
+      padding-left: 1.15em;
+    }
+    .signup-privacy-box li { margin-bottom: 5px; }
+    .signup-privacy-box li:last-child { margin-bottom: 0; }
+    .signup-privacy-footnote {
+      margin: 8px 0 0;
+      font-size: 0.74rem;
+      color: #94a3b8;
+    }
+    .signup-consent {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-top: 12px;
+      font-size: 0.82rem;
+      color: #475569;
+    }
+    .signup-consent input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--signup-navy); }
+    .btn-signup-submit {
+      width: 100%;
+      margin-top: 22px;
+      padding: 14px 20px;
+      font-weight: 800;
+      font-size: 1rem;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #0f3560 0%, var(--signup-navy) 100%);
+      color: #fff;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .btn-signup-submit:hover:not(:disabled) {
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(10, 35, 66, 0.35);
+    }
+    .btn-signup-submit:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .signup-footer-link {
+      text-align: center;
+      margin-top: 18px;
+      font-size: 0.88rem;
+      color: #64748b;
+    }
+    .signup-footer-link a {
+      font-weight: 700;
+      color: var(--kepco-blue);
+      text-decoration: none;
+    }
+    .signup-footer-link a:hover { text-decoration: underline; }
+    .signup-hint {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <header class="signup-topbar">
+    <a class="signup-brand" href="index.html">
+      <img src="https://lh3.googleusercontent.com/d/196cwAcdh72FSYj38Lj5g9mS2rSZ12vXQ" alt="KEPCO">
+      <span>자재센터 불용자재 환입차량 예약시스템</span>
+    </a>
+    <nav class="signup-nav" aria-label="계정">
+      <a href="login.html">로그인</a>
+      <a href="signup.html" class="is-active">회원가입</a>
+    </nav>
+  </header>
+
+  <div class="signup-wrap">
+    <div class="signup-card">
+      <aside class="signup-hero" aria-hidden="false">
+        <div class="signup-hero-inner">
+          <!-- <p class="signup-hero-kicker">환입 차량 예약 · 마스터 등록 업체 전용</p> -->
+          <h2>회원 가입 절차 안내</h2>
+          <p>
+            사업자번호로 소속을 확인한 뒤 로그인 정보를 등록하면, 예약 신청과 일정 관리를 같은 계정으로 이어서 이용할 수 있습니다.
+          </p>
+          <ul class="signup-hero-features">
+            <li>
+              <span class="fi" aria-hidden="true">1</span>
+              <span><strong>사업자번호</strong>를 입력하면, 시스템에 등록된 <strong>지사·업체</strong>가 안내됩니다.</span>
+            </li>
+            <li>
+              <span class="fi" aria-hidden="true">2</span>
+              <span><strong>이메일(아이디)</strong>과 비밀번호를 설정합니다.</span>
+            </li>
+            <li>
+              <span class="fi" aria-hidden="true">3</span>
+              <span>약관 동의 후 가입합니다.</span>
+            </li>
+          </ul>
+          <p class="signup-hero-note">사업자번호로 조회되지 않으면 담당 부서에 <strong>등록</strong>을 요청해 주세요.</p>
+        </div>
+      </aside>
+
+      <div class="signup-form-panel">
+        <h1>회원가입</h1>
+        <p class="subtitle">사전 등록된 업체만 가입할 수 있습니다. 사업자번호 입력 시 등록된 지사·업체가 안내됩니다.</p>
+
+        <form id="signupForm" novalidate>
+          <div class="signup-section-label">업체 정보</div>
+          <div class="mb-3">
+            <label class="signup-label" for="brn">사업자등록번호</label>
+            <input class="signup-input" type="text" id="brn" name="brn" placeholder="예: 123-45-67890" autocomplete="off" required>
+            <p class="signup-hint">하이픈이 있거나 없거나 모두 조회됩니다. 아래는 시스템 등록 현황 안내이며, 가입 시 해당 지사가 모두 계정에 연결됩니다.</p>
+            <div id="branchMatchBox" class="branch-match-box is-empty" aria-live="polite">
+              사업자번호를 입력하면 업체명·등록 지사 안내가 표시됩니다.
+            </div>
+          </div>
+
+          <div class="signup-section-label">로그인 정보</div>
+          <div class="mb-3">
+            <label class="signup-label" for="email">이메일 (아이디)</label>
+            <input class="signup-input" type="email" id="email" name="email" placeholder="name@company.com" autocomplete="email" required>
+          </div>
+          <div class="signup-row-2">
+            <div class="mb-3">
+              <label class="signup-label" for="password">비밀번호</label>
+              <input class="signup-input" type="password" id="password" name="password" placeholder="8자 이상 권장" autocomplete="new-password" required minlength="6">
+            </div>
+            <div class="mb-3">
+              <label class="signup-label" for="password2">비밀번호 확인</label>
+              <input class="signup-input" type="password" id="password2" name="password2" placeholder="동일하게 입력" autocomplete="new-password" required minlength="6">
+            </div>
+          </div>
+
+          <div class="signup-privacy-wrap">
+            <div class="signup-privacy-box" role="note" aria-label="개인정보 수집 이용 안내">
+              <strong>개인정보 수집·이용 안내 (회원가입)</strong>
+              <ul>
+                <li><strong>수집 항목</strong>: 사업자등록번호, 시스템에 등록된 소속 지사·업체(조회 결과), 이메일, 비밀번호(암호화 저장)</li>
+                <li><strong>이용 목적</strong>: 회원 식별·인증, 환입 차량 예약 신청·처리·이력 관리, 안내 메일 발송</li>
+                <li><strong>보유 기간</strong>: 회원 탈퇴 시까지(다만 관련 법령에 따라 보관이 필요한 경우 해당 기간)</li>
+              </ul>
+            </div>
+            <div class="signup-consent">
+              <input type="checkbox" id="agree" name="agree" required>
+              <label for="agree">위 수집·이용 안내를 확인했고, 안내된 목적 범위로 개인정보 처리에 동의합니다.</label>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-signup-submit" id="btnSubmit">가입 완료</button>
+        </form>
+
+        <p class="signup-footer-link">
+          이미 계정이 있으신가요? <a href="login.html">로그인</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script>
+    (function () {
+      var sbClient = null;
+      function getSupabase() {
+        if (!sbClient) {
+          if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
+            throw new Error('config.js에 SUPABASE_URL, SUPABASE_ANON_KEY가 필요합니다.');
+          }
+          sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+        return sbClient;
+      }
+
+      function digitsOnly(s) {
+        return String(s || '').replace(/\D/g, '');
+      }
+
+      var brnInput = document.getElementById('brn');
+      var branchBox = document.getElementById('branchMatchBox');
+      var lookupTimer = null;
+      var lastRows = [];
+
+      function renderBranchMatches(rows) {
+        lastRows = rows || [];
+        if (!lastRows.length) {
+          var d = digitsOnly(brnInput.value);
+          branchBox.classList.add('is-empty');
+          branchBox.innerHTML = d.length
+            ? '해당 사업자번호로 등록된 업체가 없습니다. 담당 부서에 마스터 등록을 요청해 주세요.'
+            : '사업자번호를 입력하면 업체명·등록 지사 안내가 표시됩니다.';
+          return;
+        }
+        branchBox.classList.remove('is-empty');
+        var esc = function (t) {
+          if (!t) return '';
+          return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        };
+        var nameSet = {};
+        lastRows.forEach(function (r) {
+          var n = (r.name != null ? String(r.name) : '').trim();
+          if (n) nameSet[n] = true;
+        });
+        var uniqueNames = Object.keys(nameSet);
+        var companyHtml;
+        if (uniqueNames.length === 1) {
+          companyHtml =
+            '<div class="lookup-company-field">' +
+            '<span class="lookup-field-label">업체명</span>' +
+            '<div class="lookup-field-value">' + esc(uniqueNames[0]) + '</div>' +
+            '</div>';
+        } else if (uniqueNames.length > 1) {
+          companyHtml =
+            '<div class="lookup-company-field">' +
+            '<span class="lookup-field-label">업체명 (동일 사업자로 지사별 상이한 명칭이 등록된 경우)</span>' +
+            '<div class="lookup-field-value is-multi">' +
+            uniqueNames.map(function (n) { return '<span>' + esc(n) + '</span>'; }).join('') +
+            '</div></div>';
+        } else {
+          companyHtml =
+            '<div class="lookup-company-field">' +
+            '<span class="lookup-field-label">업체명</span>' +
+            '<div class="lookup-field-value">—</div>' +
+            '</div>';
+        }
+        var rowsHtml = lastRows.map(function (r) {
+          return (
+            '<div class="branch-match-item">' +
+            '<span class="branch-bullet" aria-hidden="true"></span>' +
+            '<p class="branch-text">' + esc(r.branch_name) + '</p>' +
+            '</div>'
+          );
+        }).join('');
+        branchBox.innerHTML =
+          '<p class="branch-match-caption">시스템에 아래와 같이 등록되어 있습니다.</p>' +
+          companyHtml +
+          '<p class="lookup-branches-heading">등록 소속 지사</p>' +
+          rowsHtml;
+      }
+
+      async function runLookup() {
+        var d = digitsOnly(brnInput.value);
+        if (!d.length) {
+          renderBranchMatches([]);
+          return;
+        }
+        try {
+          var sb = getSupabase();
+          var res = await sb.rpc('lookup_companies_by_brn', { p_brn: d });
+          if (res.error) {
+            console.warn(res.error);
+            branchBox.classList.add('is-empty');
+            branchBox.innerHTML = '조회에 실패했습니다. SQL 마이그레이션(supabase_migration_user_signup.sql) 적용 여부를 확인해 주세요.';
+            return;
+          }
+          renderBranchMatches(res.data || []);
+        } catch (e) {
+          console.warn(e);
+          branchBox.classList.add('is-empty');
+          branchBox.innerHTML = '조회 중 오류가 발생했습니다.';
+        }
+      }
+
+      brnInput.addEventListener('input', function () {
+        if (lookupTimer) clearTimeout(lookupTimer);
+        lookupTimer = setTimeout(runLookup, 400);
+      });
+      brnInput.addEventListener('blur', function () {
+        if (lookupTimer) clearTimeout(lookupTimer);
+        runLookup();
+      });
+
+      document.getElementById('signupForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var agreeEl = document.getElementById('agree');
+        if (!agreeEl || !agreeEl.checked) {
+          alert('개인정보 수집·이용 안내에 동의해 주셔야 가입할 수 있습니다.');
+          return;
+        }
+        var email = (document.getElementById('email').value || '').trim();
+        var pw = document.getElementById('password').value || '';
+        var pw2 = document.getElementById('password2').value || '';
+        var brnDigits = digitsOnly(brnInput.value);
+
+        if (pw !== pw2) {
+          alert('비밀번호와 비밀번호 확인이 일치하지 않습니다.');
+          return;
+        }
+        if (pw.length < 8) {
+          alert('비밀번호는 8자 이상으로 설정해 주세요.');
+          return;
+        }
+
+        if (!brnDigits.length || !lastRows.length) {
+          alert('사업자번호를 입력해 주세요. 시스템에 등록된 업체가 조회되어야 가입할 수 있습니다.');
+          return;
+        }
+
+        var btn = document.getElementById('btnSubmit');
+        btn.disabled = true;
+
+        try {
+          var sb = getSupabase();
+          var brnAvail = await sb.rpc('signup_brn_is_available', { p_brn: brnDigits });
+          if (brnAvail.error) {
+            console.warn(brnAvail.error);
+            alert('가입 가능 여부 확인에 실패했습니다. 잠시 후 다시 시도하거나 SQL 마이그레이션(supabase_migration_one_account_per_brn.sql) 적용 여부를 확인해 주세요.');
+            btn.disabled = false;
+            return;
+          }
+          if (brnAvail.data !== true) {
+            alert('이미 해당 사업자번호(업체)로 가입된 계정이 있습니다. 기존 계정으로 로그인하거나, 관리자에게 문의해주세요.');
+            btn.disabled = false;
+            return;
+          }
+
+          var redirect = new URL('login.html', window.location.href).href;
+          var res = await sb.auth.signUp({
+            email: email,
+            password: pw,
+            options: {
+              emailRedirectTo: redirect,
+              data: {
+                brn: brnDigits
+              }
+            }
+          });
+
+          if (res.error) {
+            alert(res.error.message || '가입에 실패했습니다.');
+            btn.disabled = false;
+            return;
+          }
+
+          if (res.data.session) {
+            alert('가입이 완료되었습니다. 메인 화면으로 이동합니다.');
+            window.location.replace(new URL('index.html', window.location.href).href);
+          } else {
+            alert('가입 메일을 발송했습니다. 메일의 링크로 인증한 뒤 로그인해 주세요.');
+            window.location.href = 'login.html';
+          }
+        } catch (err) {
+          console.warn(err);
+          alert('가입 처리 중 오류가 발생했습니다.');
+        }
+        btn.disabled = false;
+      });
+    })();
+  </script>
+</body>
+</html>

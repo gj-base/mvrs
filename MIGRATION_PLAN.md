@@ -1,8 +1,9 @@
 # 자재센터 불용자재 환입차량 예약시스템 — 마이그레이션 계획
 
 ## 스택
-- **프론트**: GitHub Pages (정적 HTML/JS)
-- **백엔드**: Supabase (DB + Storage + Auth)
+- **프론트**: 정적 HTML/JS
+- **DB**: Supabase
+- **파일 저장**: Cloudflare R2 (Cloudflare Worker 업로드 프록시)
 
 ---
 
@@ -27,9 +28,9 @@
 | file3_url | text | 안전수칙 동의서 3 URL |
 | status | text | '대기' \| '승인' \| '반려' (default '대기') |
 
-### 1-2. Storage
+### 1-2. 파일 저장(R2)
 - 버킷: `reservation-files`
-- 업로드: 인증 없이 업로드 허용 또는 **서명 URL** 사용 권장 (보안)
+- 업로드 경로: 브라우저 -> Worker -> R2
 - 파일 경로 예: `{reservation_id}/file1.pdf`
 
 ### 1-3. RLS (Row Level Security)
@@ -50,7 +51,8 @@
    - `config.js` 또는 인라인: `SUPABASE_URL`, `SUPABASE_ANON_KEY` (GitHub Pages에서는 anon key 노출 가능, RLS로 보호)
 
 3. **파일 업로드**
-   - 클라이언트에서 Supabase Storage에 업로드 → 받은 public URL을 예약 행에 저장
+   - 클라이언트에서 Cloudflare Worker로 업로드 -> Worker가 R2에 저장
+   - Worker가 반환한 public URL을 `doc_url_1~3`에 저장
 
 4. **관리자 로그인**
    - 옵션 A: Supabase Auth (이메일/비밀번호) + RLS로 admin만 수정
@@ -79,7 +81,8 @@
 
 - [x] Supabase 프로젝트 생성
 - [ ] `reservations` 테이블 생성 + RLS 정책 작성 (SUPABASE_SETUP.md 참고)
-- [ ] Storage 버킷 `reservation-files` 생성 및 정책 설정 (SUPABASE_SETUP.md 참고)
+- [x] R2 버킷 `reservation-files` 생성
+- [x] Worker 업로드 경로 연결 (`R2_UPLOAD_WORKER_URL`)
 - [ ] `config.js`에 URL / anon key / ADMIN_PASSWORD 설정
 - [x] index.html: getAvailableSlots → Supabase
 - [x] index.html: submitReservation → Storage 업로드 + insert

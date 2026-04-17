@@ -1,0 +1,21 @@
+# Supabase CLI 연동 시 사용. Functions 배포: supabase functions deploy <이름>
+# 실제 보호는 ADMIN_NOTIFY_SECRET(본문 admin_secret). 게이트웨이 JWT 검증은
+# 세션/키 이슈로 401만 주고 본문이 비는 경우가 있어 verify-admin-password와 동일하게 끕니다.
+[functions.send-reservation-status-email]
+verify_jwt = false
+
+# 브라우저 CORS 프리플라이트(OPTIONS)가 게이트웨이 JWT 검증에 걸리지 않도록 false.
+# 실제 인증은 본문 password ↔ Secrets ADMIN_NOTIFY_SECRET 로만 수행합니다.
+[functions.verify-admin-password]
+verify_jwt = false
+
+[functions.admin-manage-public-settings]
+verify_jwt = false
+
+# 예약 신청: 브라우저 세션 JWT는 함수 내부에서 검증합니다.
+[functions.submit-reservation]
+verify_jwt = false
+
+# 관리자 캘린더용 PII 일괄 복호화 (admin_secret + PII_ENCRYPTION_SECRET)
+[functions.decrypt-reservation-pii]
+verify_jwt = false
