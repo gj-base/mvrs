@@ -22,6 +22,10 @@ if (typeof window !== 'undefined') {
 /**
  * 관리자 암호: GitHub Pages 등 정적 사이트에 두지 않습니다.
  * Supabase Secrets `ADMIN_NOTIFY_SECRET`에만 설정하고, `verify-admin-password`·`send-reservation-status-email`이 검증합니다.
+ *
+ * 관리자 Edge Function 출발 IP (선택):
+ * - `ADMIN_ALLOWED_SOURCE_IPS`: 쉼표 구분 (미설정 시 168.78.248.161 만 허용)
+ * - 로컬에서 IP 제한 끄기: Secret 값을 `*` 또는 `OFF`
  */
 
 /**

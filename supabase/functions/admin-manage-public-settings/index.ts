@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { checkAdminSourceIp } from "../_shared/admin_source_ip.ts";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -37,6 +38,11 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== "POST") {
     return json(405, { ok: false, error: "Method not allowed" });
+  }
+
+  const ipCheck = checkAdminSourceIp(req);
+  if (!ipCheck.ok) {
+    return json(403, { ok: false, error: ipCheck.message });
   }
 
   let body: Record<string, unknown>;

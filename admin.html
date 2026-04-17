@@ -673,9 +673,14 @@
           body: { password: pw },
         });
         var http401 = error && error.context && typeof error.context.status === 'number' && error.context.status === 401;
+        var http403 = error && error.context && typeof error.context.status === 'number' && error.context.status === 403;
         var bodyUnauthorized = data && data.ok === false && data.error === 'Unauthorized';
         if (http401 || bodyUnauthorized) {
           alert('암호가 일치하지 않습니다.');
+          return;
+        }
+        if (http403) {
+          alert(await formatEdgeInvokeError(error));
           return;
         }
         if (error) {
