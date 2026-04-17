@@ -16,6 +16,10 @@ verify_jwt = false
 [functions.submit-reservation]
 verify_jwt = false
 
+# 예약 업로드 전 IP·로그인 확인 (submit-reservation 과 동일 IP 규칙)
+[functions.check-booking-submit-allowed]
+verify_jwt = false
+
 # 관리자 캘린더용 PII 일괄 복호화 (admin_secret + PII_ENCRYPTION_SECRET)
 [functions.decrypt-reservation-pii]
 verify_jwt = false

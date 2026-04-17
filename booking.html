@@ -2882,7 +2882,7 @@
       }
 
       resetLoaderProgressWidgets();
-      setLoaderMainMessage('서류 파일을 업로드하는 중입니다...');
+      setLoaderMainMessage('접속 환경을 확인하는 중입니다...');
       loader.style.display = 'flex';
 
       try {
@@ -2895,6 +2895,22 @@
 
         const sb = getSupabase();
 
+        const { data: allowData, error: allowErr } = await sb.functions.invoke(
+          'check-booking-submit-allowed',
+          { body: {} },
+        );
+        if (allowErr) {
+          hideBookingLoader();
+          alert('예약 가능 여부 확인 오류: ' + (allowErr.message || String(allowErr)));
+          return;
+        }
+        if (!allowData || !allowData.ok) {
+          hideBookingLoader();
+          alert((allowData && allowData.error) ? allowData.error : '이 환경에서는 예약을 진행할 수 없습니다.');
+          return;
+        }
+
+        setLoaderMainMessage('서류 파일을 업로드하는 중입니다...');
         const reservationId = crypto.randomUUID();
         const files = [
           document.getElementById('f1').files[0],

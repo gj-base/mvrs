@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { checkBookingSubmitBlockedBySourceIp } from "../_shared/booking_submit_block_ip.ts";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -328,6 +329,11 @@ Deno.serve(async (req: Request) => {
   const { data: userData, error: userErr } = await sb.auth.getUser(jwt);
   if (userErr || !userData.user) {
     return json(401, { ok: false, error: "로그인이 필요합니다." });
+  }
+
+  const bookingIp = checkBookingSubmitBlockedBySourceIp(req);
+  if (!bookingIp.ok) {
+    return json(200, { ok: false, error: bookingIp.message });
   }
 
   const contact = str(body.contact);
