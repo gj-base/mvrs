@@ -1461,10 +1461,8 @@
         return;
       }
       cand.sort(function (a, b) {
-        var ca = masterCompanies.find(function (c) { return Number(c.id) === a.company_id; });
-        var cb = masterCompanies.find(function (c) { return Number(c.id) === b.company_id; });
-        var sa = ca && ca.sort_order != null ? Number(ca.sort_order) : 1e9;
-        var sb = cb && cb.sort_order != null ? Number(cb.sort_order) : 1e9;
+        var sa = a.sort_order != null ? Number(a.sort_order) : 1e9;
+        var sb = b.sort_order != null ? Number(b.sort_order) : 1e9;
         if (sa !== sb) return sa - sb;
         return a.company_id - b.company_id;
       });
@@ -1635,21 +1633,100 @@
       syncCompanyPaneState();
     }
 
-    async function loadBranchCompanyMasters() {
+    function uniqIntIds(arr) {
+      var seen = {};
+      var out = [];
+      for (var i = 0; i < (arr || []).length; i++) {
+        var n = Number(arr[i]);
+        if (!Number.isFinite(n) || seen[n]) continue;
+        seen[n] = true;
+        out.push(n);
+      }
+      return out;
+    }
+
+    function parseMembershipApiRows(raw) {
+      var rows = [];
+      for (var i = 0; i < (raw || []).length; i++) {
+        var row = raw[i];
+        var co = row.companies;
+        if (!co || co.id == null) continue;
+        rows.push({
+          company_id: Number(co.id),
+          name: String(co.name || ''),
+          branch_id: Number(co.branch_id),
+          sort_order: co.sort_order != null ? Number(co.sort_order) : null
+        });
+      }
+      return rows;
+    }
+
+    /**
+     * 멤버십에 허용된 지사·업체만 DB에서 조회하고, 소속 UI·자동 선택까지 한 번에 처리
+     * (전 지사/전 업체 마스터를 받아 클라이언트에서 거르지 않음)
+     */
+    async function loadBookingMastersAndMembership() {
+      clearLoginMembershipScope();
+      masterBranches = [];
+      masterCompanies = [];
+      masterBranchWeekdays = {};
+      masterBranchBlockedYmd = {};
+      masterGlobalBlockedYmd = {};
+      var banner = document.getElementById('loginMembershipBanner');
+      var namesEl = document.getElementById('loginMembershipCompanyNames');
+      var hintEl = document.getElementById('loginMembershipExtraHint');
       try {
-        const sb = getSupabase();
-        const [r1, r2, r3, r4, r4g] = await Promise.all([
-          sb.from('branches').select('id,name,sort_order').eq('is_active', true).order('sort_order', { ascending: true }),
-          sb.from('companies').select('id,branch_id,name,business_registration_no,sort_order').eq('is_active', true).order('sort_order', { ascending: true }),
-          sb.from('branch_allowed_weekdays').select('branch_id,weekday'),
-          sb.from('branch_blocked_dates').select('branch_id,blocked_date'),
-          sb.from('global_blocked_dates').select('blocked_date')
-        ]);
+        var sb = getSupabase();
+        var sessWrap = await sb.auth.getSession();
+        var session = sessWrap && sessWrap.data && sessWrap.data.session;
+
+        var memP = session
+          ? sb.from('user_company_memberships').select('company_id, companies(id, name, branch_id, sort_order)')
+          : Promise.resolve({ data: [], error: null });
+        var r4gP = sb.from('global_blocked_dates').select('blocked_date');
+        var memAndGlobal = await Promise.all([memP, r4gP]);
+        var memR = memAndGlobal[0];
+        var r4g = memAndGlobal[1];
+
+        if (r4g.error) console.warn(r4g.error);
+        (r4g.data || []).forEach(function (row) {
+          var rawG = row.blocked_date;
+          var ymdG = rawG != null ? String(rawG).substring(0, 10) : '';
+          if (ymdG) masterGlobalBlockedYmd[ymdG] = true;
+        });
+
+        if (memR.error) console.warn(memR.error);
+        var rows = parseMembershipApiRows(memR.data || []);
+        var branchIds = uniqIntIds(rows.map(function (r) { return r.branch_id; }));
+        var companyIds = uniqIntIds(rows.map(function (r) { return r.company_id; }));
+
+        var tasks = [];
+        if (branchIds.length) {
+          tasks.push(sb.from('branches').select('id,name,sort_order').in('id', branchIds).eq('is_active', true).order('sort_order', { ascending: true }));
+          tasks.push(sb.from('branch_allowed_weekdays').select('branch_id,weekday').in('branch_id', branchIds));
+          tasks.push(sb.from('branch_blocked_dates').select('branch_id,blocked_date').in('branch_id', branchIds));
+        }
+        if (companyIds.length) {
+          tasks.push(sb.from('companies').select('id,branch_id,name,business_registration_no,sort_order').in('id', companyIds).eq('is_active', true).order('sort_order', { ascending: true }));
+        }
+        var outs = tasks.length ? await Promise.all(tasks) : [];
+        var oi = 0;
+        var r1 = { data: [], error: null };
+        var r3 = { data: [], error: null };
+        var r4 = { data: [], error: null };
+        var r2 = { data: [], error: null };
+        if (branchIds.length) {
+          r1 = outs[oi++];
+          r3 = outs[oi++];
+          r4 = outs[oi++];
+        }
+        if (companyIds.length) {
+          r2 = outs[oi++];
+        }
         if (r1.error) console.warn(r1.error);
         if (r2.error) console.warn(r2.error);
         if (r3.error) console.warn(r3.error);
         if (r4.error) console.warn(r4.error);
-        if (r4g.error) console.warn(r4g.error);
         masterBranches = r1.data || [];
         masterCompanies = r2.data || [];
         masterBranchWeekdays = {};
@@ -1667,68 +1744,15 @@
           if (!masterBranchBlockedYmd[bidB]) masterBranchBlockedYmd[bidB] = {};
           masterBranchBlockedYmd[bidB][ymdB] = true;
         });
-        masterGlobalBlockedYmd = {};
-        (r4g.data || []).forEach(function (row) {
-          var rawG = row.blocked_date;
-          var ymdG = rawG != null ? String(rawG).substring(0, 10) : '';
-          if (ymdG) masterGlobalBlockedYmd[ymdG] = true;
-        });
+
         var biEl = document.getElementById('branchSearchInput');
         if (biEl && masterBranches.length) biEl.placeholder = '지사 검색… (' + masterBranches.length + '개)';
-      } catch (e) {
-        console.warn(e);
-      }
-    }
 
-    function clearLoginMembershipScope() {
-      loggedInAllowedBranchIds = null;
-      loggedInAllowedCompanyIds = null;
-      loggedInMembershipRows = [];
-      var banner = document.getElementById('loginMembershipBanner');
-      var hintEl = document.getElementById('loginMembershipExtraHint');
-      if (banner) banner.classList.add('d-none');
-      if (hintEl) {
-        hintEl.textContent = '';
-        hintEl.classList.add('d-none');
-      }
-    }
-
-    /**
-     * 로그인 세션과 user_company_memberships 기준으로 소속 업체 안내,
-     * 지사·업체 자동 선택(지사 1곳·업체 1곳일 때), 목록 필터 적용
-     */
-    async function loadLoggedInMembershipDefaults() {
-      var banner = document.getElementById('loginMembershipBanner');
-      var namesEl = document.getElementById('loginMembershipCompanyNames');
-      var hintEl = document.getElementById('loginMembershipExtraHint');
-      clearLoginMembershipScope();
-      try {
-        var sb = getSupabase();
-        var sessWrap = await sb.auth.getSession();
-        var session = sessWrap && sessWrap.data && sessWrap.data.session;
-        if (!session) return;
-
-        var r = await sb.from('user_company_memberships').select('company_id, companies(id, name, branch_id)');
-        if (r.error) {
-          console.warn(r.error);
+        if (!rows.length) {
           return;
         }
-        var raw = r.data || [];
-        var rows = [];
-        for (var i = 0; i < raw.length; i++) {
-          var row = raw[i];
-          var co = row.companies;
-          if (!co || co.id == null) continue;
-          rows.push({
-            company_id: Number(co.id),
-            name: String(co.name || ''),
-            branch_id: Number(co.branch_id)
-          });
-        }
-        if (!rows.length) return;
 
         loggedInMembershipRows = rows.slice();
-
         loggedInAllowedBranchIds = new Set();
         loggedInAllowedCompanyIds = new Set();
         rows.forEach(function (x) {
@@ -1788,8 +1812,25 @@
       } catch (e) {
         console.warn(e);
         clearLoginMembershipScope();
+        masterBranches = [];
+        masterCompanies = [];
+        masterBranchWeekdays = {};
+        masterBranchBlockedYmd = {};
       } finally {
         syncCompanyPaneState();
+      }
+    }
+
+    function clearLoginMembershipScope() {
+      loggedInAllowedBranchIds = null;
+      loggedInAllowedCompanyIds = null;
+      loggedInMembershipRows = [];
+      var banner = document.getElementById('loginMembershipBanner');
+      var hintEl = document.getElementById('loginMembershipExtraHint');
+      if (banner) banner.classList.add('d-none');
+      if (hintEl) {
+        hintEl.textContent = '';
+        hintEl.classList.add('d-none');
       }
     }
 
@@ -2085,9 +2126,8 @@
       if (!ok) return;
       renderCalendar();
       syncDateTimeSectionLock();
-      return loadBranchCompanyMasters().then(async function () {
+      return loadBookingMastersAndMembership().then(function () {
         bindBranchCompanyPickers();
-        await loadLoggedInMembershipDefaults();
         syncDateTimeSectionLock();
         renderCalendar();
       });
