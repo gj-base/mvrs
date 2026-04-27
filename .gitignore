@@ -16,5 +16,8 @@ companies*.xlsx
 # Supabase CLI 캐시
 supabase/.temp/
 
+# Docker 이미지 tar(빌드 산출물, 용량 큼)
+internal-cloud/api/*.tar
+
 # DB 마이그레이션·RLS·임포트용 SQL (Git 추적 제외)
 *.sql

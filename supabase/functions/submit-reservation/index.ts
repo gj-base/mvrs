@@ -1,6 +1,57 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { checkBookingSubmitBlockedBySourceIp } from "../_shared/booking_submit_block_ip.ts";
+
+/** 대시보드 단일 파일 배포 시 `_shared` 미포함으로 인한 번들 오류 방지 (로직은 _shared/booking_submit_block_ip 와 동일) */
+function getClientSourceIp(req: Request): string {
+  const h = (name: string) => (req.headers.get(name) ?? "").trim();
+  const cf = h("cf-connecting-ip");
+  if (cf) return cf;
+  const fly = h("fly-client-ip");
+  if (fly) return fly;
+  const tc = h("true-client-ip");
+  if (tc) return tc;
+  const xr = h("x-real-ip");
+  if (xr) return xr;
+  const xff = h("x-forwarded-for");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return "";
+}
+
+const DEFAULT_BLOCKED_IPS = ["168.78.248.161"];
+
+type BookingSubmitIpCheckResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+function parseBlockedList(): string[] | "off" {
+  const raw = (Deno.env.get("BOOKING_BLOCKED_SOURCE_IPS") ?? "").trim();
+  if (raw.toLowerCase() === "off") return "off";
+  if (!raw) return [...DEFAULT_BLOCKED_IPS];
+  const list = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  return list.length ? list : [...DEFAULT_BLOCKED_IPS];
+}
+
+function checkBookingSubmitBlockedBySourceIp(
+  req: Request,
+): BookingSubmitIpCheckResult {
+  const mode = parseBlockedList();
+  if (mode === "off" || mode.length === 0) return { ok: true };
+
+  const ip = getClientSourceIp(req);
+  if (!ip) return { ok: true };
+
+  if (mode.includes(ip)) {
+    return {
+      ok: false,
+      message:
+        "사내 인터넷망에서는 예약 신청을 완료할 수 없습니다. 외부망에서 다시 시도해주세요.",
+    };
+  }
+  return { ok: true };
+}
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -279,6 +330,7 @@ type SubmitBody = {
   vehicle_count?: number | string;
   person_info?: string;
   vehicle_tonnage?: number | string | null;
+  vehicle_tonnage_2?: number | string | null;
   reservation_duration_minutes?: number | string;
   duration_mode?: string;
   recommended_duration_minutes?: number | string;
@@ -419,7 +471,28 @@ Deno.serve(async (req: Request) => {
   let vehicleTonnage: number | null = null;
   if (body.vehicle_tonnage != null && str(body.vehicle_tonnage) !== "") {
     const n = parseFloat(str(body.vehicle_tonnage));
-    if (!Number.isNaN(n) && n >= 0) vehicleTonnage = n;
+    if (!Number.isNaN(n) && n > 0) vehicleTonnage = n;
+  }
+  let vehicleTonnage2: number | null = null;
+  if (body.vehicle_tonnage_2 != null && str(body.vehicle_tonnage_2) !== "") {
+    const n2 = parseFloat(str(body.vehicle_tonnage_2));
+    if (!Number.isNaN(n2) && n2 > 0) vehicleTonnage2 = n2;
+  }
+  if (vehicleTonnage == null) {
+    return json(200, {
+      ok: false,
+      error: "차량 중량(톤)을 0보다 큰 값으로 입력해 주세요.",
+    });
+  }
+  if (vehicleCount === 2) {
+    if (vehicleTonnage2 == null) {
+      return json(200, {
+        ok: false,
+        error: "차량 대수를 2대로 선택하신 경우 차량 중량 2도 0보다 큰 값으로 입력해 주세요.",
+      });
+    }
+  } else {
+    vehicleTonnage2 = null;
   }
 
   const recMinRaw = body.recommended_duration_minutes;
@@ -471,11 +544,10 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  const doc1 = str(body.doc_url_1);
-  const doc2 = str(body.doc_url_2);
-  if (!doc1 || !doc2) {
-    return json(200, { ok: false, error: "필수 서류 URL이 없습니다. 파일 업로드를 다시 시도해 주세요." });
-  }
+  const doc1 =
+    body.doc_url_1 != null && str(body.doc_url_1) !== "" ? str(body.doc_url_1) : null;
+  const doc2 =
+    body.doc_url_2 != null && str(body.doc_url_2) !== "" ? str(body.doc_url_2) : null;
 
   let contactEnc: string;
   let visitorEmailEnc: string | null;
@@ -519,6 +591,7 @@ Deno.serve(async (req: Request) => {
     contact: contactEnc,
     person_info: personInfo,
     vehicle_tonnage: vehicleTonnage,
+    vehicle_tonnage_2: vehicleTonnage2,
     reservation_duration_minutes: effDur,
     duration_mode: durationMode,
     recommended_duration_minutes: recMinutes,

@@ -311,7 +311,7 @@
     }
     @media (max-width: 768px) { .material-items { grid-template-columns: 1fr; } }
 
-    /* 차량 대수·자재 종류·차량번호·차량 중량 (환입 품목 선택 아래) */
+    /* 차량 대수·차량번호·차량 중량·자재 종류 (환입 품목 선택 아래) */
     .booking-preface-card {
       background: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 100%);
       border-radius: 14px;
@@ -542,39 +542,6 @@
       box-shadow: 0 2px 12px rgba(0, 71, 149, 0.06);
       background: #fff;
       padding: 1rem 1.25rem 1.25rem;
-    }
-    .duration-only-card .duration-manual-notice {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-      padding: 7px 12px;
-      border-radius: 10px;
-      background: linear-gradient(180deg, #f0f9ff 0%, #e5f4fc 100%);
-      border: 1px solid #bae6fd;
-      box-shadow: none;
-    }
-    .duration-only-card .duration-manual-notice .dm-notice-icon {
-      flex-shrink: 0;
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.85);
-      border: 1px solid rgba(125, 211, 252, 0.65);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.95rem;
-      line-height: 1;
-    }
-    .duration-only-card .duration-manual-notice .dm-notice-text {
-      margin: 0;
-      padding: 0;
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: #164e63;
-      line-height: 1.4;
-      letter-spacing: -0.01em;
     }
 
     /* 현장 안전수칙 이미지 모달 */
@@ -909,40 +876,6 @@
                     </div>
                   </div>
                   <hr class="booking-preface-divider">
-                  <div class="booking-preface-block">
-                    <label class="form-label mb-1">📋 자재 종류 구분</label>
-                    <!-- <p class="small text-muted mb-2">3번 항목은 차량 대수를 <strong>2대</strong>로 선택한 경우에만 선택할 수 있습니다.</p> -->
-                    <div class="preface-material-kind d-flex flex-column gap-2" role="radiogroup" aria-label="자재 종류 구분">
-                      <div class="material-kind-row-with-side">
-                        <div class="material-kind-main">
-                          <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleOnly" value="scale_only" autocomplete="off">
-                          <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleOnly">1. 계근대 품목만</label>
-                        </div>
-                      </div>
-                      <div>
-                        <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleTransformer" value="scale_plus_transformer" autocomplete="off">
-                        <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleTransformer">2. 계근대 품목 + 변압기류</label>
-                      </div>
-                      <div>
-                        <div class="material-kind-requires-two-vehicles is-disabled" id="materialKindTwoVehicleOptionWrap" aria-live="polite">
-                          <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleTwoLoad" value="scale_two_loads_one_vehicle" autocomplete="off" disabled>
-                          <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleTwoLoad">3. 계근대 품목과 계근대 외 품목 혼재</label>
-                        </div>
-                      </div>
-                      <div id="scaleOnlyLoadRatioWrap" class="d-none" aria-live="polite">
-                        <div class="scale-only-load-ratio-box mt-1">
-                          <p class="text-muted small mb-2 mb-md-2" style="font-size: 0.78rem; line-height: 1.35;">적재량이 <strong>차량 중량</strong>을 기준으로 <strong>50%</strong>를 초과하나요?</p>
-                          <div class="preface-mode-row" role="radiogroup" aria-label="적재량 50% 초과 여부">
-                            <input type="radio" class="btn-check" name="scaleOnlyLoadOver50" id="scaleOnlyLoadOver" value="yes" autocomplete="off">
-                            <label class="btn btn-outline-secondary btn-sm" for="scaleOnlyLoadOver">예 (초과)</label>
-                            <input type="radio" class="btn-check" name="scaleOnlyLoadOver50" id="scaleOnlyLoadNotOver" value="no" autocomplete="off">
-                            <label class="btn btn-outline-secondary btn-sm" for="scaleOnlyLoadNotOver">아니오</label>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <hr class="booking-preface-divider">
                   <div class="row g-3">
                     <div class="col-md-6">
                       <label class="form-label">🚛 차량번호 1</label>
@@ -970,6 +903,41 @@
                     </div>
                   </div>
                   <p class="text-muted small mb-0 mt-2">4.5톤 초과 시 권장 예약 소요 시간이 60분으로 안내됩니다. (차량 2대일 때는 각 차량 중량을 입력해 주세요.)</p>
+                  <hr class="booking-preface-divider">
+                  <div class="booking-preface-block mb-0">
+                    <label class="form-label mb-1">📋 자재 종류 구분</label>
+                    <!-- <p class="small text-muted mb-2">3번 항목은 차량 대수를 <strong>2대</strong>로 선택한 경우에만 선택할 수 있습니다.</p> -->
+                    <div class="preface-material-kind d-flex flex-column gap-2" role="radiogroup" aria-label="자재 종류 구분">
+                      <div class="material-kind-row-with-side">
+                        <div class="material-kind-main">
+                          <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleOnly" value="scale_only" autocomplete="off">
+                          <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleOnly">1. 계근대 품목만</label>
+                        </div>
+                        <div id="scaleOnlyLoadRatioWrap" class="material-kind-side d-none" aria-live="polite">
+                          <div class="scale-only-load-ratio-box">
+                            <!-- <div class="fw-semibold small mb-1">적재량 · 차량 50%</div> -->
+                            <p class="text-muted small mb-2 mb-md-2" style="font-size: 0.78rem; line-height: 1.35;">적재량이 <strong>차량 중량</strong>을 기준으로 <strong>50%</strong>를 초과하나요?</p>
+                            <div class="preface-mode-row" role="radiogroup" aria-label="적재량 50% 초과 여부">
+                              <input type="radio" class="btn-check" name="scaleOnlyLoadOver50" id="scaleOnlyLoadOver" value="yes" autocomplete="off">
+                              <label class="btn btn-outline-secondary btn-sm" for="scaleOnlyLoadOver">예 (초과)</label>
+                              <input type="radio" class="btn-check" name="scaleOnlyLoadOver50" id="scaleOnlyLoadNotOver" value="no" autocomplete="off">
+                              <label class="btn btn-outline-secondary btn-sm" for="scaleOnlyLoadNotOver">아니오</label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleTransformer" value="scale_plus_transformer" autocomplete="off">
+                        <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleTransformer">2. 계근대 품목 + 변압기류 (계근대 품목과 변압기 품목이 각각 1대일 경우)</label>
+                      </div>
+                      <div>
+                        <div class="material-kind-requires-two-vehicles is-disabled" id="materialKindTwoVehicleOptionWrap" aria-live="polite">
+                          <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleTwoLoad" value="scale_two_loads_one_vehicle" autocomplete="off" disabled>
+                          <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleTwoLoad">3. 계근대 품목만(차량 2대) (2대의 차량이 계근대 품목과 변압기 품목이 혼재되어 있을 경우)</label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -978,10 +946,6 @@
                 <p class="small text-muted mb-2">차량 중량·차량 대수·환입 품목 수 등에 따라 권장 소요 시간이 정해집니다. 확인하신 뒤 아래에서 방문 예약일·시간을 선택해 주세요.</p>
                 <div class="duration-only-card mt-1">
                   <div class="combo-section-label mb-2"><span class="combo-icon">⏱</span> 소요 시간 선택</div>
-                  <div class="duration-manual-notice" role="status">
-                    <span class="dm-notice-icon" aria-hidden="true">💡</span>
-                    <p class="dm-notice-text">제한된 시간 내에 작업 미완료 예정일 경우 직접 선택으로 수동 선택하세요.</p>
-                  </div>
                   <div class="mode-row">
                     <input type="radio" class="btn-check" name="durationMode" id="durationModeAuto" value="auto" checked autocomplete="off">
                     <label class="btn btn-outline-primary" for="durationModeAuto">자동 (권장)</label>
@@ -1214,7 +1178,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="mvrs-api-client.js"></script>
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
@@ -1245,12 +1209,12 @@
 
     var sbClient = null;
     function getSupabase() {
-      if (!sbClient) {
-        if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
-          throw new Error('config.js를 확인해 주세요. SUPABASE_URL, SUPABASE_ANON_KEY가 필요합니다.');
+        if (!sbClient) {
+          if (typeof MVRS_API_BASE === 'undefined' && typeof window.MVRS_API_BASE === 'undefined') {
+            throw new Error('config.js를 확인해 주세요. MVRS_API_BASE(Nest /api)가 필요합니다.');
+          }
+          sbClient = window.supabase.createClient('', '');
         }
-        sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      }
       return sbClient;
     }
 
@@ -2133,8 +2097,8 @@
 
     var MATERIAL_KIND_LABELS = {
       scale_only: '1. 계근대 품목만',
-      scale_plus_transformer: '2. 계근대 품목 + 변압기류',
-      scale_two_loads_one_vehicle: '3. 계근대 품목과 계근대 외 품목 혼재'
+      scale_plus_transformer: '2. 계근대 품목 + 변압기류 (계근대 품목과 변압기 품목이 각각 1대일 경우)',
+      scale_two_loads_one_vehicle: '3. 계근대 품목만(차량 2대) (2대의 차량이 계근대 품목과 변압기 품목이 혼재되어 있을 경우)'
     };
 
     /** 3번(2대 실음)은 차량 2대일 때만 선택 가능 */
@@ -2153,16 +2117,11 @@
       }
     }
 
-    /** 「1. 계근대 품목만」또는 「2. 계근대 품목 + 변압기류」이면서 차량 1대일 때 적재 50% 초과 여부 패널 표시 */
-    function showsLoadOver50Question() {
-      var k = getMaterialKindValue();
-      return (k === 'scale_only' || k === 'scale_plus_transformer') && getFormVehicleCount() === 1;
-    }
-
+    /** 「1. 계근대 품목만」이면서 차량 1대일 때만 적재 50% 초과 여부 패널 표시 */
     function syncScaleOnlyLoadRatioPanel() {
       var wrap = document.getElementById('scaleOnlyLoadRatioWrap');
       if (!wrap) return;
-      var show = showsLoadOver50Question();
+      var show = getMaterialKindValue() === 'scale_only' && getFormVehicleCount() === 1;
       wrap.classList.toggle('d-none', !show);
       if (!show) {
         document.querySelectorAll('input[name="scaleOnlyLoadOver50"]').forEach(function (r) {
@@ -2171,9 +2130,9 @@
       }
     }
 
-    /** 1·2번 + 차량 1대 + 「예(초과)」이면 60분 권장 */
+    /** 계근대만 + 차량 1대 + 「예(초과)」이면 60분 권장 */
     function isScaleOnlyLoadExceeding50ForDuration() {
-      if (!showsLoadOver50Question()) return false;
+      if (getMaterialKindValue() !== 'scale_only' || getFormVehicleCount() !== 1) return false;
       var r = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
       return r && String(r.value) === 'yes';
     }
@@ -2193,7 +2152,7 @@
       var parts = [];
       var kl = getMaterialKindLabel();
       if (kl) parts.push('자재종류:' + kl);
-      if (showsLoadOver50Question()) {
+      if (getMaterialKindValue() === 'scale_only' && getFormVehicleCount() === 1) {
         var lr = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
         if (lr) parts.push('적재50%초과:' + (String(lr.value) === 'yes' ? '예' : '아니오'));
       }
@@ -2675,7 +2634,7 @@
           syncMaterialKindTwoVehicleOption();
           var t = ev && ev.target ? ev.target : r;
           if (t && t.id === 'materialKindScaleTwoLoad' && t.checked && !t.disabled) {
-            alert('「3. 계근대 품목과 계근대 외 품목 혼재」를 선택하신 경우, 변압기류 차량은 별도 예약이 필요합니다.');
+            alert('계근대 품목만 2대일 경우 변압기류 차량은 별도 예약이 필요합니다.');
           }
           if (typeof updateDurationPanel === 'function') updateDurationPanel();
           if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
@@ -2686,7 +2645,7 @@
       });
       document.querySelectorAll('input[name="scaleOnlyLoadOver50"]').forEach(function (r) {
         r.addEventListener('change', function () {
-          if (showsLoadOver50Question() && String(r.value) === 'yes' && r.checked) {
+          if (getMaterialKindValue() === 'scale_only' && getFormVehicleCount() === 1 && String(r.value) === 'yes' && r.checked) {
             var autoEl = document.getElementById('durationModeAuto');
             if (autoEl) autoEl.checked = true;
           }
@@ -2804,13 +2763,13 @@
       }
       syncMaterialKindTwoVehicleOption();
       if (getMaterialKindValue() === 'scale_two_loads_one_vehicle' && getFormVehicleCount() !== 2) {
-        alert('「3. 계근대 품목과 계근대 외 품목 혼재」는 차량 대수를 2대로 선택한 경우에만 선택할 수 있습니다.');
+        alert('「3. 계근대 품목만(차량 2대)」은 차량 대수를 2대로 선택한 경우에만 선택할 수 있습니다.');
         return;
       }
-      if (showsLoadOver50Question()) {
+      if (getMaterialKindValue() === 'scale_only' && getFormVehicleCount() === 1) {
         var lr50 = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
         if (!lr50) {
-          alert('「1. 계근대 품목만」 또는 「2. 계근대 품목 + 변압기류」를 선택하신 경우, 적재량이 차량 중량(톤) 기준 50%를 초과하는지「아니오 / 예(초과)」를 선택해 주세요.');
+          alert('「1. 계근대 품목만」을 선택하신 경우, 적재량이 차량 중량(톤) 기준 50%를 초과하는지「아니오 / 예(초과)」를 선택해 주세요.');
           return;
         }
       }
@@ -3059,4 +3018,3 @@
   </script>
 </body>
 </html>
-

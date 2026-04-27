@@ -484,17 +484,17 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="mvrs-api-client.js"></script>
   <script src="config.js"></script>
   <script>
     (function () {
       var sbClient = null;
       function getSupabase() {
         if (!sbClient) {
-          if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') {
-            throw new Error('config.js에 SUPABASE_URL, SUPABASE_ANON_KEY가 필요합니다.');
+          if (typeof MVRS_API_BASE === 'undefined' && typeof window.MVRS_API_BASE === 'undefined') {
+            throw new Error('config.js에 MVRS_API_BASE(Nest /api)가 필요합니다.');
           }
-          sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          sbClient = window.supabase.createClient('', '');
         }
         return sbClient;
       }

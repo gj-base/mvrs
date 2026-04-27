@@ -49,6 +49,9 @@ alter table public.reservations
 add column if not exists vehicle_tonnage numeric;
 
 alter table public.reservations
+add column if not exists vehicle_tonnage_2 numeric;
+
+alter table public.reservations
 add column if not exists reservation_duration_minutes integer default 30;
 
 alter table public.reservations
@@ -89,7 +92,8 @@ add column if not exists recommended_reasons jsonb;
 | company_name | text | 업체명 |
 | car_number_1 | text | 차량번호1 |
 | car_number_2 | text | nullable |
-| vehicle_tonnage | numeric | 차량 총중량(톤), nullable |
+| vehicle_tonnage | numeric | 차량 1 중량(톤), nullable |
+| vehicle_tonnage_2 | numeric | 차량 2대일 때 차량 2 중량(톤), nullable |
 | reservation_duration_minutes | integer | 예약 소요 시간(분), 30/60 |
 | duration_mode | text | 'auto' / 'manual' |
 | recommended_duration_minutes | integer | 시스템 권장 소요 시간(분) |

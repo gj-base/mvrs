@@ -23,3 +23,7 @@ verify_jwt = false
 # 관리자 캘린더용 PII 일괄 복호화 (admin_secret + PII_ENCRYPTION_SECRET)
 [functions.decrypt-reservation-pii]
 verify_jwt = false
+
+# 관리자 '회원가입 현황' 조회 (admin_secret + service_role)
+[functions.admin-list-user-signups]
+verify_jwt = false

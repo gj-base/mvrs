@@ -1,0 +1,32 @@
+내부 클라우드 배포 요약 (루트 Supabase/외부망용 파일은 건드리지 않음)
+
+[디렉터리]
+  internal-cloud/web/   → Apache DocumentRoot (정적 HTML + mvrs-api-client.js + config.js + assets/)
+  internal-cloud/api/   → NestJS (전역 prefix /api)
+
+[Apache 예시]
+  ProxyPass        /api http://127.0.0.1:3000/api
+  ProxyPassReverse /api http://127.0.0.1:3000/api
+
+  web 루트를 internal-cloud/web 로 지정하면 브라우저는 동일 오리진에서 /api 로 Nest를 호출합니다.
+  config.js 의 MVRS_API_BASE 는 기본값 '/api' 입니다.
+
+[Nest 환경변수]
+  api/.env.example 참고 후 .env 로 복사해 DATABASE_URL, JWT_SECRET, ADMIN_NOTIFY_SECRET, PII_ENCRYPTION_SECRET 등 설정
+  - 예약 최종 제출 IP 차단(BOOKING_BLOCKED_SOURCE_IPS): 비워 두면 비활성(사내망에서도 예약 가능). 특정 IP만 막을 때만 설정.
+
+[빌드]
+  Node/npm 이 설치된 환경에서:
+    cd internal-cloud/api
+    npm install
+    npm run build
+    npm run start:prod
+
+  또는 Docker:
+    cd internal-cloud/api
+    docker build -t mvrs-api:local .
+
+[주의]
+  - auth.users / public 스키마는 Supabase에서 마이그레이션한 DB와 동일해야 합니다.
+  - 가입 트리거(handle_new_user) 등은 기존 SQL 그대로 사용합니다.
+  - npm 이 PATH 에 없으면 위 빌드는 로컬/CI에서 실행하세요.
