@@ -576,6 +576,17 @@
       line-height: 1.4;
       letter-spacing: -0.01em;
     }
+    .duration-only-card .duration-manual-contact-notice {
+      background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+      border-color: #fcd34d;
+    }
+    .duration-only-card .duration-manual-contact-notice .dm-notice-icon {
+      border-color: rgba(251, 191, 36, 0.75);
+    }
+    .duration-only-card .duration-manual-contact-notice .dm-notice-text {
+      color: #78350f;
+      font-weight: 600;
+    }
 
     /* 현장 안전수칙 이미지 모달 */
     .safety-rules-modal-root {
@@ -916,17 +927,17 @@
                       <div class="material-kind-row-with-side">
                         <div class="material-kind-main">
                           <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleOnly" value="scale_only" autocomplete="off">
-                          <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleOnly">1. 계근대 품목만</label>
+                          <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleOnly" id="materialKindLabelScaleOnly">1. 계근대 품목만</label>
                         </div>
                       </div>
                       <div>
                         <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleTransformer" value="scale_plus_transformer" autocomplete="off">
-                        <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleTransformer">2. 계근대 품목 + 변압기류</label>
+                        <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleTransformer" id="materialKindLabelScaleTransformer">2. 계근대 품목 + 변압기류</label>
                       </div>
-                      <div>
+                      <div id="materialKindTwoVehicleRow" class="d-none">
                         <div class="material-kind-requires-two-vehicles is-disabled" id="materialKindTwoVehicleOptionWrap" aria-live="polite">
                           <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleTwoLoad" value="scale_two_loads_one_vehicle" autocomplete="off" disabled>
-                          <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleTwoLoad">3. 계근대 품목과 계근대 외 품목 혼재</label>
+                          <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleTwoLoad" id="materialKindLabelScaleTwoLoad">3. 계근대 품목과 계근대 외 품목 혼재</label>
                         </div>
                       </div>
                       <div id="scaleOnlyLoadRatioWrap" class="d-none" aria-live="polite">
@@ -986,13 +997,17 @@
                     <input type="radio" class="btn-check" name="durationMode" id="durationModeAuto" value="auto" checked autocomplete="off">
                     <label class="btn btn-outline-primary" for="durationModeAuto">자동 (권장)</label>
                     <input type="radio" class="btn-check" name="durationMode" id="durationModeManual" value="manual" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="durationModeManual">직접 선택</label>
+                    <label class="btn btn-outline-primary" for="durationModeManual">수동 (직접선택)</label>
                   </div>
                   <div id="durationAutoPanel" class="duration-recap mt-3">
                     <strong id="durationRecValue">권장: 30분</strong>
                     <div id="durationRecBadges" class="mt-2 d-flex flex-wrap gap-1"></div>
                   </div>
                   <div id="durationManualPanel" class="d-none mt-3">
+                    <div class="duration-manual-notice duration-manual-contact-notice mb-3" role="note">
+                      <span class="dm-notice-icon" aria-hidden="true">📞</span>
+                      <p class="dm-notice-text">소요시간 직접 선택 시 자재센터 담당자와 협의 후 예약을 신청하시기 바랍니다.<br>담당자 연락처 : 062-260-5131, 5145</p>
+                    </div>
                     <div class="mode-row mb-0">
                       <input type="radio" class="btn-check" name="durationManual" id="durationManual30" value="30" autocomplete="off">
                       <label class="btn btn-outline-secondary" for="durationManual30">30분</label>
@@ -2131,25 +2146,47 @@
       return 1;
     }
 
-    var MATERIAL_KIND_LABELS = {
-      scale_only: '1. 계근대 품목만',
-      scale_plus_transformer: '2. 계근대 품목 + 변압기류',
-      scale_two_loads_one_vehicle: '3. 계근대 품목과 계근대 외 품목 혼재'
-    };
+    function getMaterialKindLabels() {
+      if (getFormVehicleCount() === 2) {
+        return {
+          scale_only: '1. 계근대 품목만 2대일 경우',
+          scale_plus_transformer: '2. 계근대 품목 + 계근대 외 품목 각각 1대일 경우',
+          scale_two_loads_one_vehicle: '3. 계근대 품목과 계근대 외 품목 혼재되어 있을 경우'
+        };
+      }
+      return {
+        scale_only: '1. 계근대 품목만',
+        scale_plus_transformer: '2. 계근대 품목 + 변압기류',
+        scale_two_loads_one_vehicle: '3. 계근대 품목과 계근대 외 품목 혼재'
+      };
+    }
 
-    /** 3번(2대 실음)은 차량 2대일 때만 선택 가능 */
+    function syncMaterialKindOptionLabels() {
+      var map = getMaterialKindLabels();
+      var e1 = document.getElementById('materialKindLabelScaleOnly');
+      var e2 = document.getElementById('materialKindLabelScaleTransformer');
+      var e3 = document.getElementById('materialKindLabelScaleTwoLoad');
+      if (e1) e1.textContent = map.scale_only;
+      if (e2) e2.textContent = map.scale_plus_transformer;
+      if (e3) e3.textContent = map.scale_two_loads_one_vehicle;
+    }
+
+    /** 3번(2대 실음)은 차량 2대일 때만 표시·선택 가능 */
     function syncMaterialKindTwoVehicleOption() {
       var opt3 = document.getElementById('materialKindScaleTwoLoad');
       var wrap = document.getElementById('materialKindTwoVehicleOptionWrap');
+      var row = document.getElementById('materialKindTwoVehicleRow');
       if (!opt3) return;
       var allow = getFormVehicleCount() === 2;
       if (!allow) {
         if (opt3.checked) opt3.checked = false;
         opt3.disabled = true;
         if (wrap) wrap.classList.add('is-disabled');
+        if (row) row.classList.add('d-none');
       } else {
         opt3.disabled = false;
         if (wrap) wrap.classList.remove('is-disabled');
+        if (row) row.classList.remove('d-none');
       }
     }
 
@@ -2185,7 +2222,8 @@
 
     function getMaterialKindLabel() {
       var v = getMaterialKindValue();
-      return v && MATERIAL_KIND_LABELS[v] ? MATERIAL_KIND_LABELS[v] : '';
+      var map = getMaterialKindLabels();
+      return v && map[v] ? map[v] : '';
     }
 
     /** 제출 시 material_info 앞에 붙이는 메타(차량대수는 DB vehicle_count 컬럼에 별도 저장) */
@@ -2589,7 +2627,7 @@
 
     (function bindMaterialCheckboxes() {
       var TRANSFORMER_GROUP_NOTICE_IDS = { 'material-transformer': true, 'material-switchgear': true, 'material-gongriil': true };
-      var TRANSFORMER_GROUP_NOTICE_MSG = '계근대 외 품목만 환입 시 별도 예약 필요';
+      var TRANSFORMER_GROUP_NOTICE_MSG = '계근대 외 품목만 환입 시 별도 예약 필요\n담당자 연락처 : 062-260-5140(노훤 과장)';
       var boxes = document.querySelectorAll('.material-checkbox');
       boxes.forEach(function (box) {
         box.addEventListener('change', function () {
@@ -2641,6 +2679,15 @@
 
     (function bindVehicleCountAndMaterialKind() {
       var car2Input = document.getElementById('car2Input');
+      var MATERIAL_KIND_OPTION2_TWO_TRUCK_NOTICE = '변압기류만 단독으로 2대를 가져오실 경우 별도 예약이 필요합니다.\n담당자 연락처 : 062-260-5140(노훤 과장)';
+
+      function alertMaterialKindOption2TwoTrucksIfApplicable() {
+        if (getFormVehicleCount() !== 2) return;
+        var mk = document.querySelector('input[name="materialKind"]:checked');
+        if (!mk || mk.id !== 'materialKindScaleTransformer') return;
+        alert(MATERIAL_KIND_OPTION2_TWO_TRUCK_NOTICE);
+      }
+
       function syncCar2EnabledState() {
         if (!car2Input) return;
         var two = getFormVehicleCount() === 2;
@@ -2654,6 +2701,7 @@
       function onVehicleCountChange() {
         syncCar2EnabledState();
         syncVehicleTonnageFieldsLayout();
+        syncMaterialKindOptionLabels();
         syncMaterialKindTwoVehicleOption();
         syncScaleOnlyLoadRatioPanel();
         var sel = document.querySelector('input[name="vehicleCount"]:checked');
@@ -2674,8 +2722,8 @@
           syncScaleOnlyLoadRatioPanel();
           syncMaterialKindTwoVehicleOption();
           var t = ev && ev.target ? ev.target : r;
-          if (t && t.id === 'materialKindScaleTwoLoad' && t.checked && !t.disabled) {
-            alert('「3. 계근대 품목과 계근대 외 품목 혼재」를 선택하신 경우, 변압기류 차량은 별도 예약이 필요합니다.');
+          if (t && t.id === 'materialKindScaleTransformer' && t.checked) {
+            alertMaterialKindOption2TwoTrucksIfApplicable();
           }
           if (typeof updateDurationPanel === 'function') updateDurationPanel();
           if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
@@ -2699,6 +2747,7 @@
       });
       syncCar2EnabledState();
       syncVehicleTonnageFieldsLayout();
+      syncMaterialKindOptionLabels();
       syncMaterialKindTwoVehicleOption();
       syncScaleOnlyLoadRatioPanel();
       updateReservationSummary();
@@ -2804,7 +2853,7 @@
       }
       syncMaterialKindTwoVehicleOption();
       if (getMaterialKindValue() === 'scale_two_loads_one_vehicle' && getFormVehicleCount() !== 2) {
-        alert('「3. 계근대 품목과 계근대 외 품목 혼재」는 차량 대수를 2대로 선택한 경우에만 선택할 수 있습니다.');
+        alert('「3. 계근대 품목과 계근대 외 품목 혼재되어 있을 경우」는 차량 대수를 2대로 선택한 경우에만 선택할 수 있습니다.');
         return;
       }
       if (showsLoadOver50Question()) {

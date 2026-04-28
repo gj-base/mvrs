@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
-/** 대시보드 단일 파일 배포 시 `_shared` 미포함으로 인한 번들 오류 방지 (로직은 _shared/booking_submit_block_ip 와 동일) */
+/** 대시보드 단일 파일 배포 시 `_shared` 미포함으로 인한 번들 오류 방지 (로직은 _shared/booking_submit_block_ip.ts 와 동일) */
 function getClientSourceIp(req: Request): string {
   const h = (name: string) => (req.headers.get(name) ?? "").trim();
   const cf = h("cf-connecting-ip");
@@ -20,8 +20,6 @@ function getClientSourceIp(req: Request): string {
   return "";
 }
 
-const DEFAULT_BLOCKED_IPS = ["168.78.248.161"];
-
 type BookingSubmitIpCheckResult =
   | { ok: true }
   | { ok: false; message: string };
@@ -29,9 +27,9 @@ type BookingSubmitIpCheckResult =
 function parseBlockedList(): string[] | "off" {
   const raw = (Deno.env.get("BOOKING_BLOCKED_SOURCE_IPS") ?? "").trim();
   if (raw.toLowerCase() === "off") return "off";
-  if (!raw) return [...DEFAULT_BLOCKED_IPS];
+  if (!raw) return "off";
   const list = raw.split(",").map((s) => s.trim()).filter(Boolean);
-  return list.length ? list : [...DEFAULT_BLOCKED_IPS];
+  return list.length ? list : "off";
 }
 
 function checkBookingSubmitBlockedBySourceIp(

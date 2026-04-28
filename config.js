@@ -30,8 +30,8 @@ if (typeof window !== 'undefined') {
 
 /**
  * 예약 최종 제출 IP 차단: Edge Function `submit-reservation` Secret `BOOKING_BLOCKED_SOURCE_IPS`
- * - 미설정·빈 값 → 기본으로 168.78.248.161 에서 예약 완료만 거절
- * - OFF → 비활성 / 그 외 → 쉼표 구분 IP 목록으로 차단
+ * - 미설정·빈 값·OFF → 차단 없음(사내망·외부망 모두 예약 가능)
+ * - 그 외 → 쉼표 구분 공인 IP 목록에 해당하는 출구에서만 예약 완료 거절
  *
  * 예약 연락처·이메일 암호화: 클라이언트에 키를 두지 않습니다.
  * Edge Functions `submit-reservation`, `decrypt-reservation-pii`, `send-reservation-status-email` Secrets:
