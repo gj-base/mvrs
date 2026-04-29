@@ -375,10 +375,64 @@
     .landing-hero-bg {
       position: absolute;
       inset: 0;
-      background:
-        linear-gradient(105deg, rgba(26, 54, 93, 0.9) 0%, rgba(26, 54, 93, 0.76) 42%, rgba(26, 54, 93, 0.58) 100%),
-        url('assets/main-img.jpg') center/cover no-repeat;
       z-index: 0;
+      overflow: hidden;
+      background: #3a4a5c;
+    }
+    .landing-hero-bg-panel {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+    }
+    /* 겹침은 좁게 + jj는 거의 전 폭 불투명, 맨 오른쪽 끝만 짧게 페더(본문이 가려져 보이지 않게) */
+    .landing-hero-bg-panel--jj {
+      left: 0;
+      width: calc(50% + clamp(10px, 1.4vw, 22px));
+      z-index: 2;
+      background-image: url('assets/kepco_jj3.png');
+      -webkit-mask-image: linear-gradient(
+        to right,
+        #000 0%,
+        #000 88%,
+        rgba(0, 0, 0, 0.92) 93%,
+        rgba(0, 0, 0, 0.45) 97%,
+        transparent 100%
+      );
+      mask-image: linear-gradient(
+        to right,
+        #000 0%,
+        #000 88%,
+        rgba(0, 0, 0, 0.92) 93%,
+        rgba(0, 0, 0, 0.45) 97%,
+        transparent 100%
+      );
+      mask-mode: alpha;
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+    }
+    .landing-hero-bg-panel--gj {
+      right: 0;
+      width: calc(50% + clamp(10px, 1.4vw, 22px));
+      z-index: 1;
+      background-image: url('assets/kepco_gj3.png');
+    }
+    .landing-hero-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      background: linear-gradient(
+        105deg,
+        rgba(26, 54, 93, 0.9) 0%,
+        rgba(26, 54, 93, 0.76) 42%,
+        rgba(26, 54, 93, 0.58) 100%
+      );
+      pointer-events: none;
     }
     .landing-hero-inner {
       position: relative;
@@ -910,7 +964,10 @@
   </header>
 
   <section class="landing-hero" aria-label="시스템 소개">
-    <div class="landing-hero-bg" aria-hidden="true"></div>
+    <div class="landing-hero-bg" aria-hidden="true">
+      <div class="landing-hero-bg-panel landing-hero-bg-panel--jj"></div>
+      <div class="landing-hero-bg-panel landing-hero-bg-panel--gj"></div>
+    </div>
     <div class="landing-hero-inner">
       <h2 class="landing-hero-title">자재센터 불용자재 환입차량 예약시스템</h2>
       <p class="landing-hero-desc">
