@@ -386,6 +386,7 @@
       max-width: 1120px;
       margin: 0 auto;
       width: 100%;
+      --landing-hero-copy-max: 640px;
     }
     .landing-hero-title {
       color: #fff;
@@ -400,7 +401,7 @@
       color: rgba(255, 255, 255, 0.92);
       font-size: clamp(0.95rem, 2vw, 1.05rem);
       line-height: 1.65;
-      max-width: 655px;
+      max-width: var(--landing-hero-copy-max);
       margin: 0 0 26px;
     }
     .landing-hero-actions {
@@ -455,7 +456,7 @@
       display: flex;
       align-items: flex-start;
       gap: 12px;
-      max-width: 720px;
+      max-width: var(--landing-hero-copy-max);
       padding: 14px 16px;
       border-radius: 10px;
       background: rgba(15, 39, 68, 0.55);
