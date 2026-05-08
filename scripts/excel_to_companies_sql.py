@@ -28,7 +28,7 @@ import re
 import sys
 from pathlib import Path
 
-# 엑셀/현장 표기 → supabase_seed_branch_weekdays 의 branches.name
+# 엑셀/현장 표기 → DB `branches.name` (지정요일은 scripts/branch_allowed_weekdays_update.sql 참고)
 BRANCH_NAME_ALIASES: dict[str, str] = {
     "광주전남본부직할": "본부 직할",
     "본부직할": "본부 직할",
