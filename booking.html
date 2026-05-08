@@ -275,36 +275,36 @@
     }
     .material-item .item-name { font-weight: 600; color: #333; }
     .material-doc-notice {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 14px 14px;
+      background-color: #fff9f0;
+      border: 1px solid #ffeeba;
+      border-radius: 10px;
+      padding: 20px;
       margin-top: 12px;
     }
     .material-doc-notice .material-doc-notice-lead {
       display: block;
-      font-weight: 700;
-      font-size: 0.92rem;
+      font-weight: 800;
+      font-size: 1.02rem;
       color: var(--kepco-blue);
       letter-spacing: -0.02em;
-      margin-bottom: 6px;
+      margin-bottom: 10px;
     }
     .material-doc-notice .material-doc-notice-body {
       margin: 0;
-      font-size: 0.88rem;
+      font-size: 0.98rem;
       line-height: 1.55;
-      color: #4b5563;
-      font-weight: 400;
+      color: #374151;
+      font-weight: 500;
     }
     .material-doc-notice .material-doc-notice-body strong {
-      color: #334155;
-      font-weight: 600;
+      color: #1e293b;
+      font-weight: 700;
     }
     .material-doc-notice .material-doc-notice-warn {
-      margin: 10px 0 0;
-      padding-top: 8px;
-      border-top: 1px dashed #fecaca;
-      font-size: 0.9rem;
+      margin: 12px 0 0;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(220, 38, 38, 0.45);
+      font-size: 1rem;
       font-weight: 700;
       color: #dc2626;
       line-height: 1.45;
@@ -2683,7 +2683,7 @@
 
     (function bindVehicleCountAndMaterialKind() {
       var car2Input = document.getElementById('car2Input');
-      var MATERIAL_KIND_OPTION2_TWO_TRUCK_NOTICE = '변압기류만 단독으로 2대를 가져오실 경우 별도 예약이 필요합니다.\n담당자 연락처 : 062-260-5140(노훤 과장)';
+      var MATERIAL_KIND_OPTION2_TWO_TRUCK_NOTICE = '변압기류만 단독으로 1대를 가져오실 경우 별도 예약이 필요합니다.\n담당자 연락처 : 062-260-5140(노훤 과장)';
 
       function alertMaterialKindOption2TwoTrucksIfApplicable() {
         if (getFormVehicleCount() !== 2) return;
