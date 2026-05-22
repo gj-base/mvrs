@@ -1269,22 +1269,54 @@
       return sbClient;
     }
 
+    function redirectToLogin(message) {
+      alert(message);
+      window.location.replace(new URL('login.html', window.location.href).href);
+    }
+
+    /** Edge Function 오류 본문(401 등)을 사용자 메시지로 변환 */
+    async function getFunctionInvokeErrorMessage(err) {
+      if (!err) return '알 수 없는 오류';
+      if (err.context && typeof err.context.json === 'function') {
+        try {
+          var body = await err.context.json();
+          if (body && typeof body.error === 'string' && body.error) return body.error;
+        } catch (e) { /* ignore */ }
+      }
+      var msg = err.message || String(err);
+      if (/non-2xx/i.test(msg)) {
+        return '로그인 세션이 만료되었거나 유효하지 않습니다. 다시 로그인해 주세요.';
+      }
+      return msg;
+    }
+
+    /** localStorage 세션이 아닌 Supabase 서버 기준으로 로그인 유효성 확인 */
+    async function ensureActiveBookingSession(sb) {
+      var userRes = await sb.auth.getUser();
+      if (userRes.data && userRes.data.user && !userRes.error) {
+        return { ok: true };
+      }
+      var refreshRes = await sb.auth.refreshSession();
+      if (refreshRes.data && refreshRes.data.session && refreshRes.data.user) {
+        return { ok: true };
+      }
+      try { await sb.auth.signOut(); } catch (e) { /* ignore */ }
+      return { ok: false, message: '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.' };
+    }
+
     /** 비로그인 시 예약 페이지 접근 차단 */
     async function ensureBookingAuthOrRedirect() {
       try {
         var sb = getSupabase();
-        var res = await sb.auth.getSession();
-        var session = res && res.data && res.data.session;
-        if (!session) {
-          alert('예약 신청은 로그인 후 이용할 수 있습니다.');
-          window.location.replace(new URL('login.html', window.location.href).href);
+        var authCheck = await ensureActiveBookingSession(sb);
+        if (!authCheck.ok) {
+          redirectToLogin(authCheck.message || '예약 신청은 로그인 후 이용할 수 있습니다.');
           return false;
         }
         return true;
       } catch (e) {
         console.warn(e);
-        alert('로그인 확인 중 오류가 발생했습니다. 로그인 페이지로 이동합니다.');
-        window.location.replace(new URL('login.html', window.location.href).href);
+        redirectToLogin('로그인 확인 중 오류가 발생했습니다. 로그인 페이지로 이동합니다.');
         return false;
       }
     }
@@ -1348,6 +1380,8 @@
     var loggedInAllowedCompanyIds = null;
     /** 멤버십 행 { company_id, name, branch_id } — 지사 선택 시 업체 자동 채움에 사용 */
     var loggedInMembershipRows = [];
+    /** true: 전 지사·업체 대리 예약 (user_profiles.is_master) */
+    var isMasterAccount = false;
 
     function escapeHtmlPicker(s) {
       if (!s) return '';
@@ -1405,11 +1439,31 @@
       }
     }
 
-    /** 업체 칸: 로그인 소속 자동 값만 표시, 항상 disabled (제출은 hidden 필드 사용) */
+    /** 업체 칸: 일반 회원은 소속 자동 반영(disabled), 마스터는 지사 선택 후 검색·선택 */
     function syncCompanyPaneState() {
       var inp = document.getElementById('companySearchInput');
       var pane = document.getElementById('companyPane');
       if (!inp || !pane) return;
+
+      if (isMasterAccount) {
+        pane.style.opacity = '';
+        pane.style.pointerEvents = '';
+        if (!selectedBranchId) {
+          inp.disabled = true;
+          inp.readOnly = true;
+          inp.placeholder = '관할 지사를 선택한 뒤 업체를 검색·선택하세요';
+        } else {
+          inp.disabled = false;
+          inp.readOnly = false;
+          var nCo = masterCompanies.filter(function (c) {
+            return Number(c.branch_id) === Number(selectedBranchId);
+          }).length;
+          inp.placeholder = nCo
+            ? '업체 검색… (' + nCo + '개)'
+            : '이 지사에 등록된 업체가 없습니다. 관리자에게 문의하세요.';
+        }
+        return;
+      }
 
       inp.disabled = true;
       inp.readOnly = true;
@@ -1684,6 +1738,73 @@
       return rows;
     }
 
+    async function resolveIsMasterAccount(sb, session) {
+      if (!session || !session.user || !session.user.id) return false;
+      try {
+        var r = await sb.from('user_profiles').select('is_master').eq('id', session.user.id).maybeSingle();
+        if (r.error) {
+          console.warn(r.error);
+          return false;
+        }
+        return !!(r.data && r.data.is_master === true);
+      } catch (e) {
+        console.warn(e);
+        return false;
+      }
+    }
+
+    function applyBranchScheduleFromRows(weekdayRows, blockedRows) {
+      masterBranchWeekdays = {};
+      (weekdayRows || []).forEach(function (row) {
+        var bid = String(row.branch_id);
+        if (!masterBranchWeekdays[bid]) masterBranchWeekdays[bid] = [];
+        masterBranchWeekdays[bid].push(Number(row.weekday));
+      });
+      masterBranchBlockedYmd = {};
+      (blockedRows || []).forEach(function (row) {
+        var bidB = String(row.branch_id);
+        var rawD = row.blocked_date;
+        var ymdB = rawD != null ? String(rawD).substring(0, 10) : '';
+        if (!ymdB) return;
+        if (!masterBranchBlockedYmd[bidB]) masterBranchBlockedYmd[bidB] = {};
+        masterBranchBlockedYmd[bidB][ymdB] = true;
+      });
+    }
+
+    async function loadAllActiveBookingMasters(sb) {
+      var results = await Promise.all([
+        sb.from('branches').select('id,name,sort_order').eq('is_active', true).order('sort_order', { ascending: true }),
+        sb.from('companies').select('id,branch_id,name,business_registration_no,sort_order').eq('is_active', true).order('sort_order', { ascending: true }),
+        sb.from('branch_allowed_weekdays').select('branch_id,weekday'),
+        sb.from('branch_blocked_dates').select('branch_id,blocked_date'),
+      ]);
+      var r1 = results[0];
+      var r2 = results[1];
+      var r3 = results[2];
+      var r4 = results[3];
+      if (r1.error) console.warn(r1.error);
+      if (r2.error) console.warn(r2.error);
+      if (r3.error) console.warn(r3.error);
+      if (r4.error) console.warn(r4.error);
+      masterBranches = r1.data || [];
+      masterCompanies = r2.data || [];
+      applyBranchScheduleFromRows(r3.data || [], r4.data || []);
+      var biEl = document.getElementById('branchSearchInput');
+      if (biEl && masterBranches.length) {
+        biEl.placeholder = '지사 검색… (' + masterBranches.length + '개, 전체)';
+      }
+    }
+
+    function showMasterAccountBanner(banner, namesEl, hintEl) {
+      if (!banner || !namesEl) return;
+      namesEl.textContent = '운영 대리 예약 — 지사·업체를 선택해 접수해 주세요.';
+      banner.classList.remove('d-none');
+      if (hintEl) {
+        hintEl.textContent = '승인·반려(취소)는 관리자 페이지에서 처리합니다.';
+        hintEl.classList.remove('d-none');
+      }
+    }
+
     /**
      * 멤버십에 허용된 지사·업체만 DB에서 조회하고, 소속 UI·자동 선택까지 한 번에 처리
      * (전 지사/전 업체 마스터를 받아 클라이언트에서 거르지 않음)
@@ -1703,10 +1824,25 @@
         var sessWrap = await sb.auth.getSession();
         var session = sessWrap && sessWrap.data && sessWrap.data.session;
 
+        var r4gP = sb.from('global_blocked_dates').select('blocked_date');
+        isMasterAccount = await resolveIsMasterAccount(sb, session);
+
+        if (isMasterAccount) {
+          var globalOnly = await r4gP;
+          if (globalOnly.error) console.warn(globalOnly.error);
+          (globalOnly.data || []).forEach(function (row) {
+            var rawG = row.blocked_date;
+            var ymdG = rawG != null ? String(rawG).substring(0, 10) : '';
+            if (ymdG) masterGlobalBlockedYmd[ymdG] = true;
+          });
+          await loadAllActiveBookingMasters(sb);
+          showMasterAccountBanner(banner, namesEl, hintEl);
+          return;
+        }
+
         var memP = session
           ? sb.from('user_company_memberships').select('company_id, companies(id, name, branch_id, sort_order)')
           : Promise.resolve({ data: [], error: null });
-        var r4gP = sb.from('global_blocked_dates').select('blocked_date');
         var memAndGlobal = await Promise.all([memP, r4gP]);
         var memR = memAndGlobal[0];
         var r4g = memAndGlobal[1];
@@ -1752,21 +1888,7 @@
         if (r4.error) console.warn(r4.error);
         masterBranches = r1.data || [];
         masterCompanies = r2.data || [];
-        masterBranchWeekdays = {};
-        (r3.data || []).forEach(function (row) {
-          var bid = String(row.branch_id);
-          if (!masterBranchWeekdays[bid]) masterBranchWeekdays[bid] = [];
-          masterBranchWeekdays[bid].push(Number(row.weekday));
-        });
-        masterBranchBlockedYmd = {};
-        (r4.data || []).forEach(function (row) {
-          var bidB = String(row.branch_id);
-          var rawD = row.blocked_date;
-          var ymdB = rawD != null ? String(rawD).substring(0, 10) : '';
-          if (!ymdB) return;
-          if (!masterBranchBlockedYmd[bidB]) masterBranchBlockedYmd[bidB] = {};
-          masterBranchBlockedYmd[bidB][ymdB] = true;
-        });
+        applyBranchScheduleFromRows(r3.data || [], r4.data || []);
 
         var biEl = document.getElementById('branchSearchInput');
         if (biEl && masterBranches.length) biEl.placeholder = '지사 검색… (' + masterBranches.length + '개)';
@@ -1845,6 +1967,7 @@
     }
 
     function clearLoginMembershipScope() {
+      isMasterAccount = false;
       loggedInAllowedBranchIds = null;
       loggedInAllowedCompanyIds = null;
       loggedInMembershipRows = [];
@@ -2191,8 +2314,9 @@
       syncScaleOnlyLoadRatioPanel();
     }
 
-    /** 「1. 계근대 품목만」+ 차량 1대, 또는 「2. 계근대 품목 + 변압기류」+ 차량 1대·2대일 때 적재 50% 초과 여부 패널 표시 */
+    /** 환입 품목 4종 이상 + (「1. 계근대 품목만」+ 차량 1대, 또는 「2. 계근대 + 변압기류」+ 차량 1~2대)일 때 적재 50% 초과 여부 패널 표시 */
     function showsLoadOver50Question() {
+      if (getMaterialTypeCount() < 4) return false;
       var k = getMaterialKindValue();
       var n = getFormVehicleCount();
       if (k === 'scale_only') return n === 1;
@@ -2212,7 +2336,7 @@
       }
     }
 
-    /** 1번+1대, 2번+1대·2대 + 「예(초과)」이면 60분 권장 */
+    /** 품목 4종 이상 + 1번+1대 또는 2번+1~2대 + 「예(초과)」이면 60분 권장 */
     function isScaleOnlyLoadExceeding50ForDuration() {
       if (!showsLoadOver50Question()) return false;
       var r = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
@@ -2302,8 +2426,7 @@
       var need60 = false;
       if (isTonnageOver()) { need60 = true; reasons.push('4.5t 초과'); }
       if (getFormVehicleCount() >= 2) { need60 = true; reasons.push('차량 2대'); }
-      if (getMaterialTypeCount() >= 5) { need60 = true; reasons.push('품목 5종 이상'); }
-      if (isScaleOnlyLoadExceeding50ForDuration()) { need60 = true; reasons.push('적재량 50% 초과'); }
+      if (isScaleOnlyLoadExceeding50ForDuration()) { need60 = true; reasons.push('품목 4종 이상 + 적재량 50% 초과'); }
       return { minutes: need60 ? 60 : 30, reasons: reasons };
     }
 
@@ -2640,6 +2763,7 @@
           }
           toggleMaterialItemCheckedClass(box);
           syncMaterialSummary();
+          syncScaleOnlyLoadRatioPanel();
           if (typeof updateDurationPanel === 'function') updateDurationPanel();
           if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
             updateSlots();
@@ -2863,7 +2987,7 @@
       if (showsLoadOver50Question()) {
         var lr50 = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
         if (!lr50) {
-          alert('「1. 계근대 품목만」또는「2. 계근대 품목 + 변압기류」에 해당하시는 경우(차량 1대, 또는 차량 2대이면서 2번을 선택한 경우)에는 적재량이 차량 중량(톤) 기준 50%를 초과하는지「아니오 / 예(초과)」를 선택해 주세요.');
+          alert('환입 품목이 4종 이상이면서 「1. 계근대 품목만」또는「2. 계근대 품목 + 변압기류」에 해당하시는 경우(차량 1대, 또는 차량 2대이면서 2번을 선택한 경우)에는 적재량이 차량 중량(톤) 기준 50%를 초과하는지「아니오 / 예(초과)」를 선택해 주세요.');
           return;
         }
       }
@@ -2956,13 +3080,26 @@
 
         const sb = getSupabase();
 
+        const authCheck = await ensureActiveBookingSession(sb);
+        if (!authCheck.ok) {
+          hideBookingLoader();
+          redirectToLogin(authCheck.message || '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
+          return;
+        }
+
         const { data: allowData, error: allowErr } = await sb.functions.invoke(
           'check-booking-submit-allowed',
           { body: {} },
         );
         if (allowErr) {
           hideBookingLoader();
-          alert('예약 가능 여부 확인 오류: ' + (allowErr.message || String(allowErr)));
+          var allowMsg = await getFunctionInvokeErrorMessage(allowErr);
+          if (/로그인|세션/i.test(allowMsg)) {
+            try { await sb.auth.signOut(); } catch (e) { /* ignore */ }
+            redirectToLogin(allowMsg);
+            return;
+          }
+          alert('예약 가능 여부 확인 오류: ' + allowMsg);
           return;
         }
         if (!allowData || !allowData.ok) {
