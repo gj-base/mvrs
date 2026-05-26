@@ -2314,9 +2314,9 @@
       syncScaleOnlyLoadRatioPanel();
     }
 
-    /** 환입 품목 4종 이상 + (「1. 계근대 품목만」+ 차량 1대, 또는 「2. 계근대 + 변압기류」+ 차량 1~2대)일 때 적재 50% 초과 여부 패널 표시 */
+    /** 계근대 품목 4종 이상 + (「1. 계근대 품목만」+ 차량 1대, 또는 「2. 계근대 + 변압기류」+ 차량 1~2대)일 때 적재 50% 초과 여부 패널 표시 */
     function showsLoadOver50Question() {
-      if (getMaterialTypeCount() < 4) return false;
+      if (getScaleMaterialTypeCount() < 4) return false;
       var k = getMaterialKindValue();
       var n = getFormVehicleCount();
       if (k === 'scale_only') return n === 1;
@@ -2336,7 +2336,7 @@
       }
     }
 
-    /** 품목 4종 이상 + 1번+1대 또는 2번+1~2대 + 「예(초과)」이면 60분 권장 */
+    /** 계근대 품목 4종 이상 + 1번+1대 또는 2번+1~2대 + 「예(초과)」이면 60분 권장 */
     function isScaleOnlyLoadExceeding50ForDuration() {
       if (!showsLoadOver50Question()) return false;
       var r = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
@@ -2367,8 +2367,8 @@
       return '[' + parts.join('][') + '] ';
     }
 
-    function getMaterialTypeCount() {
-      return document.querySelectorAll('.material-checkbox:checked').length;
+    function getScaleMaterialTypeCount() {
+      return document.querySelectorAll('.material-checkbox:checked[data-unit="KG"]').length;
     }
 
     function parseTonnageInputById(inputId) {
@@ -2426,7 +2426,7 @@
       var need60 = false;
       if (isTonnageOver()) { need60 = true; reasons.push('4.5t 초과'); }
       if (getFormVehicleCount() >= 2) { need60 = true; reasons.push('차량 2대'); }
-      if (isScaleOnlyLoadExceeding50ForDuration()) { need60 = true; reasons.push('품목 4종 이상 + 적재량 50% 초과'); }
+      if (isScaleOnlyLoadExceeding50ForDuration()) { need60 = true; reasons.push('계근대 품목 4종 이상 + 적재량 50% 초과'); }
       return { minutes: need60 ? 60 : 30, reasons: reasons };
     }
 
@@ -2987,7 +2987,7 @@
       if (showsLoadOver50Question()) {
         var lr50 = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
         if (!lr50) {
-          alert('환입 품목이 4종 이상이면서 「1. 계근대 품목만」또는「2. 계근대 품목 + 변압기류」에 해당하시는 경우(차량 1대, 또는 차량 2대이면서 2번을 선택한 경우)에는 적재량이 차량 중량(톤) 기준 50%를 초과하는지「아니오 / 예(초과)」를 선택해 주세요.');
+          alert('계근대 품목이 4종 이상이면서 「1. 계근대 품목만」또는「2. 계근대 품목 + 변압기류」에 해당하시는 경우(차량 1대, 또는 차량 2대이면서 2번을 선택한 경우)에는 적재량이 차량 중량(톤) 기준 50%를 초과하는지「아니오 / 예(초과)」를 선택해 주세요.');
           return;
         }
       }
