@@ -27,3 +27,7 @@ verify_jwt = false
 # 관리자 '회원가입 현황' 조회 (admin_secret + service_role)
 [functions.admin-list-user-signups]
 verify_jwt = false
+
+# 관리자 회원 계정 삭제 (Auth + 프로필 + 멤버십, 예약 유지)
+[functions.admin-delete-user]
+verify_jwt = false

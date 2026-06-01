@@ -380,6 +380,7 @@ Deno.serve(async (req: Request) => {
   if (userErr || !userData.user) {
     return json(401, { ok: false, error: "로그인이 필요합니다." });
   }
+  const userId = userData.user.id;
 
   const bookingIp = checkBookingSubmitBlockedBySourceIp(req);
   if (!bookingIp.ok) {
@@ -403,6 +404,61 @@ Deno.serve(async (req: Request) => {
       ok: false,
       error: "관할 지사와 소속 업체를 선택해 주세요.",
     });
+  }
+
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!serviceKey) {
+    return json(503, { ok: false, error: "Server misconfigured" });
+  }
+  const sbAdmin = createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data: coRow, error: coErr } = await sbAdmin
+    .from("companies")
+    .select("id")
+    .eq("id", companyId)
+    .eq("branch_id", branchId)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+  if (coErr) {
+    return json(200, { ok: false, error: "업체 확인 오류: " + coErr.message });
+  }
+  if (!coRow) {
+    return json(200, {
+      ok: false,
+      error: "선택한 업체·지사 조합이 올바르지 않습니다.",
+    });
+  }
+
+  const { data: profRow, error: profErr } = await sbAdmin
+    .from("user_profiles")
+    .select("is_master")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profErr) {
+    return json(200, { ok: false, error: "계정 확인 오류: " + profErr.message });
+  }
+  const isMaster = profRow?.is_master === true;
+  if (!isMaster) {
+    const { data: memRows, error: memErr } = await sbAdmin
+      .from("user_company_memberships")
+      .select("company_id, companies!inner(branch_id)")
+      .eq("user_id", userId)
+      .eq("company_id", companyId)
+      .limit(1);
+    if (memErr) {
+      return json(200, { ok: false, error: "예약 권한 확인 오류: " + memErr.message });
+    }
+    const mem = memRows?.[0] as { companies?: { branch_id?: number } } | undefined;
+    const memBranchId = mem?.companies?.branch_id;
+    if (!mem || Number(memBranchId) !== branchId) {
+      return json(200, {
+        ok: false,
+        error: "선택한 업체·지사에 대한 예약 권한이 없습니다.",
+      });
+    }
   }
 
   const date = str(body.reservation_date).slice(0, 10);
@@ -600,7 +656,7 @@ Deno.serve(async (req: Request) => {
     status: "대기",
   };
 
-  const { error: insertErr } = await sb.from("reservations").insert(insertRow);
+  const { error: insertErr } = await sbAdmin.from("reservations").insert(insertRow);
   if (insertErr) {
     return json(200, {
       ok: false,

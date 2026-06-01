@@ -359,38 +359,6 @@
     .booking-preface-card .preface-material-kind .material-kind-requires-two-vehicles.is-disabled label.btn {
       cursor: not-allowed;
     }
-    .booking-preface-card .material-kind-row-with-side {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    @media (min-width: 768px) {
-      .booking-preface-card .material-kind-row-with-side {
-        flex-direction: row;
-        align-items: stretch;
-        gap: 12px;
-      }
-      /* 차량번호 행(col-md-6 두 칸)과 동일하게 좌·우 절반 비율 */
-      .booking-preface-card .material-kind-row-with-side .material-kind-main,
-      .booking-preface-card .material-kind-row-with-side .material-kind-side {
-        flex: 1 1 0;
-        min-width: 0;
-        width: auto;
-      }
-    }
-    .booking-preface-card .scale-only-load-ratio-box {
-      border: 1px solid #e8edf4;
-      background: #fff;
-      border-radius: 10px;
-      padding: 10px 12px;
-      height: 100%;
-    }
-    .booking-preface-card .scale-only-load-ratio-box .preface-mode-row .btn {
-      flex: 1;
-      min-width: 0;
-      font-size: 0.85rem;
-      padding: 6px 10px;
-    }
     /* 차량 총중량 + 예약 소요 시간 (한 블록) */
     .vehicle-duration-combo {
       background: transparent;
@@ -542,6 +510,24 @@
       box-shadow: 0 2px 12px rgba(0, 71, 149, 0.06);
       background: #fff;
       padding: 1rem 1.25rem 1.25rem;
+    }
+    .duration-only-card .mode-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .duration-only-card .mode-row .btn {
+      flex: 1;
+      min-width: 100px;
+      border-radius: 10px;
+      font-weight: 600;
+      padding: 10px 16px;
+    }
+    .duration-only-card .btn-check:checked + .btn-outline-primary,
+    .duration-only-card .btn-check:checked + .btn-outline-secondary {
+      background: var(--kepco-blue);
+      border-color: var(--kepco-blue);
+      color: #fff;
     }
     .duration-only-card .duration-manual-notice {
       display: flex;
@@ -924,11 +910,9 @@
                     <label class="form-label mb-1">📋 자재 종류 구분</label>
                     <!-- <p class="small text-muted mb-2">3번 항목은 차량 대수를 <strong>2대</strong>로 선택한 경우에만 선택할 수 있습니다.</p> -->
                     <div class="preface-material-kind d-flex flex-column gap-2" role="radiogroup" aria-label="자재 종류 구분">
-                      <div class="material-kind-row-with-side">
-                        <div class="material-kind-main">
-                          <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleOnly" value="scale_only" autocomplete="off">
-                          <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleOnly" id="materialKindLabelScaleOnly">1. 계근대 품목만</label>
-                        </div>
+                      <div>
+                        <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleOnly" value="scale_only" autocomplete="off">
+                        <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleOnly" id="materialKindLabelScaleOnly">1. 계근대 품목만</label>
                       </div>
                       <div>
                         <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleTransformer" value="scale_plus_transformer" autocomplete="off">
@@ -938,17 +922,6 @@
                         <div class="material-kind-requires-two-vehicles is-disabled" id="materialKindTwoVehicleOptionWrap" aria-live="polite">
                           <input type="radio" class="btn-check" name="materialKind" id="materialKindScaleTwoLoad" value="scale_two_loads_one_vehicle" autocomplete="off" disabled>
                           <label class="btn btn-outline-secondary w-100 text-start py-2 px-3" for="materialKindScaleTwoLoad" id="materialKindLabelScaleTwoLoad">3. 계근대 품목과 계근대 외 품목 혼재</label>
-                        </div>
-                      </div>
-                      <div id="scaleOnlyLoadRatioWrap" class="d-none" aria-live="polite">
-                        <div class="scale-only-load-ratio-box mt-1">
-                          <p class="text-muted small mb-2 mb-md-2" style="font-size: 0.78rem; line-height: 1.35;">적재량이 <strong>차량 중량</strong>을 기준으로 <strong>50%</strong>를 초과하나요?</p>
-                          <div class="preface-mode-row" role="radiogroup" aria-label="적재량 50% 초과 여부">
-                            <input type="radio" class="btn-check" name="scaleOnlyLoadOver50" id="scaleOnlyLoadOver" value="yes" autocomplete="off">
-                            <label class="btn btn-outline-secondary btn-sm" for="scaleOnlyLoadOver">예 (초과)</label>
-                            <input type="radio" class="btn-check" name="scaleOnlyLoadOver50" id="scaleOnlyLoadNotOver" value="no" autocomplete="off">
-                            <label class="btn btn-outline-secondary btn-sm" for="scaleOnlyLoadNotOver">아니오</label>
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -980,47 +953,27 @@
                       </div>
                     </div>
                   </div>
-                  <p class="text-muted small mb-0 mt-2">4.5톤 초과 시 권장 예약 소요 시간이 60분으로 안내됩니다. (차량 2대일 때는 각 차량 중량을 입력해 주세요.)</p>
+                  <p class="text-muted small mb-0 mt-2">차량 2대일 때는 각 차량 중량을 입력해 주세요.</p>
                 </div>
               </div>
 
               <div class="col-12">
                 <label class="form-label">⏱ 예약 소요 시간</label>
-                <p class="small text-muted mb-2">차량 중량·차량 대수·환입 품목 수 등에 따라 권장 소요 시간이 정해집니다. 확인하신 뒤 아래에서 방문 예약일·시간을 선택해 주세요.</p>
+                <p class="small text-muted mb-2">30분 또는 60분 중 작업에 맞는 소요 시간을 선택해 주세요. 아래 방문 예약일·시간은 선택한 소요 시간에 맞게 표시됩니다.</p>
                 <div class="duration-only-card mt-1">
                   <div class="combo-section-label mb-2"><span class="combo-icon">⏱</span> 소요 시간 선택</div>
-                  <div class="duration-manual-notice" role="status">
-                    <span class="dm-notice-icon" aria-hidden="true">💡</span>
-                    <p class="dm-notice-text">제한된 시간 내에 작업 미완료 예정일 경우 직접 선택으로 수동 선택하세요.</p>
-                  </div>
-                  <div class="mode-row">
-                    <input type="radio" class="btn-check" name="durationMode" id="durationModeAuto" value="auto" checked autocomplete="off">
-                    <label class="btn btn-outline-primary" for="durationModeAuto">자동 (권장)</label>
-                    <input type="radio" class="btn-check" name="durationMode" id="durationModeManual" value="manual" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="durationModeManual">수동 (직접선택)</label>
-                  </div>
-                  <div id="durationAutoPanel" class="duration-recap mt-3">
-                    <strong id="durationRecValue">권장: 30분</strong>
-                    <div id="durationRecBadges" class="mt-2 d-flex flex-wrap gap-1"></div>
-                  </div>
-                  <div id="durationManualPanel" class="d-none mt-3">
-                    <div class="duration-manual-notice duration-manual-contact-notice mb-3" role="note">
-                      <span class="dm-notice-icon" aria-hidden="true">📞</span>
-                      <p class="dm-notice-text">소요시간 직접 선택 시 자재센터 담당자와 협의 후 예약을 신청하시기 바랍니다.<br>담당자 연락처 : 062-260-5134</p>
-                    </div>
-                    <div class="mode-row mb-0">
-                      <input type="radio" class="btn-check" name="durationManual" id="durationManual30" value="30" autocomplete="off">
-                      <label class="btn btn-outline-secondary" for="durationManual30">30분</label>
-                      <input type="radio" class="btn-check" name="durationManual" id="durationManual60" value="60" autocomplete="off">
-                      <label class="btn btn-outline-secondary" for="durationManual60">60분</label>
-                    </div>
+                  <div class="mode-row mb-0">
+                    <input type="radio" class="btn-check" name="durationMinutes" id="durationMinutes30" value="30" checked autocomplete="off">
+                    <label class="btn btn-outline-primary" for="durationMinutes30">30분</label>
+                    <input type="radio" class="btn-check" name="durationMinutes" id="durationMinutes60" value="60" autocomplete="off">
+                    <label class="btn btn-outline-primary" for="durationMinutes60">60분</label>
                   </div>
                 </div>
               </div>
 
               <div id="dateTimeSection" class="col-12 is-locked">
                 <label class="form-label mb-2">📅 방문 예약일 · 시간</label>
-                <p class="small text-muted mb-3" id="dateTimeSectionLockHint">관할 지사와 업체를 선택하면 달력에서 예약일을 고를 수 있습니다. 예약 가능일은 오늘부터 7일 후까지(오늘 포함)입니다. 소요 시간을 확인한 뒤 일시를 선택하면 30분·60분 예약에 맞는 가능 시간이 표시됩니다.</p>
+                <p class="small text-muted mb-3" id="dateTimeSectionLockHint">관할 지사와 업체를 선택하면 달력에서 예약일을 고를 수 있습니다. 예약 가능일은 오늘부터 7일 후까지(오늘 포함)입니다. 소요 시간(30분·60분)을 선택한 뒤 일시를 선택하면 예약 가능 시간이 표시됩니다.</p>
                 <div class="row g-4">
                   <div class="col-md-5">
                     <input type="hidden" id="date" name="date" required>
@@ -2102,7 +2055,6 @@
       renderCalendar();
       syncDateTimeSectionLock();
       if (typeof updateReservationSummary === 'function') updateReservationSummary();
-      if (typeof updateDurationPanel === 'function') updateDurationPanel();
     }
 
     function isCalDayDisabled(ymd, todayStr) {
@@ -2187,7 +2139,6 @@
           selectedDateStr = ymd;
           document.getElementById('date').value = ymd;
           renderCalendar();
-          updateDurationPanel();
           updateSlots();
         });
       });
@@ -2311,36 +2262,6 @@
         if (wrap) wrap.classList.remove('is-disabled');
         if (row) row.classList.remove('d-none');
       }
-      syncScaleOnlyLoadRatioPanel();
-    }
-
-    /** 계근대 품목 4종 이상 + (「1. 계근대 품목만」+ 차량 1대, 또는 「2. 계근대 + 변압기류」+ 차량 1~2대)일 때 적재 50% 초과 여부 패널 표시 */
-    function showsLoadOver50Question() {
-      if (getScaleMaterialTypeCount() < 4) return false;
-      var k = getMaterialKindValue();
-      var n = getFormVehicleCount();
-      if (k === 'scale_only') return n === 1;
-      if (k === 'scale_plus_transformer') return n === 1 || n === 2;
-      return false;
-    }
-
-    function syncScaleOnlyLoadRatioPanel() {
-      var wrap = document.getElementById('scaleOnlyLoadRatioWrap');
-      if (!wrap) return;
-      var show = showsLoadOver50Question();
-      wrap.classList.toggle('d-none', !show);
-      if (!show) {
-        document.querySelectorAll('input[name="scaleOnlyLoadOver50"]').forEach(function (r) {
-          r.checked = false;
-        });
-      }
-    }
-
-    /** 계근대 품목 4종 이상 + 1번+1대 또는 2번+1~2대 + 「예(초과)」이면 60분 권장 */
-    function isScaleOnlyLoadExceeding50ForDuration() {
-      if (!showsLoadOver50Question()) return false;
-      var r = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
-      return r && String(r.value) === 'yes';
     }
 
     function getMaterialKindValue() {
@@ -2359,16 +2280,8 @@
       var parts = [];
       var kl = getMaterialKindLabel();
       if (kl) parts.push('자재종류:' + kl);
-      if (showsLoadOver50Question()) {
-        var lr = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
-        if (lr) parts.push('적재50%초과:' + (String(lr.value) === 'yes' ? '예' : '아니오'));
-      }
       if (!parts.length) return '';
       return '[' + parts.join('][') + '] ';
-    }
-
-    function getScaleMaterialTypeCount() {
-      return document.querySelectorAll('.material-checkbox:checked[data-unit="KG"]').length;
     }
 
     function parseTonnageInputById(inputId) {
@@ -2381,14 +2294,9 @@
       return n;
     }
 
-    function isTonnageOver() {
-      var t1 = parseTonnageInputById('vehicleTonnageInput');
-      if (t1 != null && t1 > 4.5) return true;
-      if (getFormVehicleCount() >= 2) {
-        var t2 = parseTonnageInputById('vehicleTonnageInput2');
-        if (t2 != null && t2 > 4.5) return true;
-      }
-      return false;
+    function getSelectedDurationMinutes() {
+      var m = document.querySelector('input[name="durationMinutes"]:checked');
+      return m && parseInt(m.value, 10) === 60 ? 60 : 30;
     }
 
     function getVehicleTonnage1Value() {
@@ -2419,29 +2327,6 @@
           } catch (e) { /* ignore */ }
         }
       }
-    }
-
-    function computeRecommendedDuration() {
-      var reasons = [];
-      var need60 = false;
-      if (isTonnageOver()) { need60 = true; reasons.push('4.5t 초과'); }
-      if (getFormVehicleCount() >= 2) { need60 = true; reasons.push('차량 2대'); }
-      if (isScaleOnlyLoadExceeding50ForDuration()) { need60 = true; reasons.push('계근대 품목 4종 이상 + 적재량 50% 초과'); }
-      return { minutes: need60 ? 60 : 30, reasons: reasons };
-    }
-
-    function isDurationManualMode() {
-      var r = document.querySelector('input[name="durationMode"]:checked');
-      return r && r.value === 'manual';
-    }
-
-    function getEffectiveDurationMinutes() {
-      if (isScaleOnlyLoadExceeding50ForDuration()) return 60;
-      var rec = computeRecommendedDuration();
-      if (!isDurationManualMode()) return rec.minutes;
-      var m = document.querySelector('input[name="durationManual"]:checked');
-      if (!m) return rec.minutes;
-      return parseInt(m.value, 10) === 60 ? 60 : 30;
     }
 
     function slotStartToMinutes(slot) {
@@ -2547,7 +2432,7 @@
         }
       }
 
-      var dur = getEffectiveDurationMinutes();
+      var dur = getSelectedDurationMinutes();
       var timeVal = (document.getElementById('time') && document.getElementById('time').value) ? document.getElementById('time').value.trim() : '';
       var slotText = document.getElementById('sumSlotText');
       var slotLine = document.getElementById('sumSlotLine');
@@ -2581,39 +2466,6 @@
         if (occupancy[s] > 0) return false;
       }
       return true;
-    }
-
-    function updateDurationPanel() {
-      var rec = computeRecommendedDuration();
-      var elVal = document.getElementById('durationRecValue');
-      var elBadges = document.getElementById('durationRecBadges');
-      var panelManual = document.getElementById('durationManualPanel');
-      if (elVal) elVal.textContent = '권장: ' + rec.minutes + '분';
-      if (elBadges) {
-        if (rec.reasons.length === 0) {
-          elBadges.innerHTML = '<span class="badge bg-light text-dark border">기본 30분</span>';
-        } else {
-          elBadges.innerHTML = rec.reasons.map(function (r) {
-            return '<span class="badge bg-light text-primary border me-1 mb-1">' + r + '</span>';
-          }).join('');
-        }
-      }
-      if (panelManual) {
-        if (isDurationManualMode()) {
-          panelManual.classList.remove('d-none');
-          var m30 = document.getElementById('durationManual30');
-          var m60 = document.getElementById('durationManual60');
-          var man = document.querySelector('input[name="durationManual"]:checked');
-          if (!man) {
-            if (rec.minutes === 60) { if (m60) m60.checked = true; }
-            else { if (m30) m30.checked = true; }
-          }
-        } else {
-          panelManual.classList.add('d-none');
-        }
-      }
-      // 중량/소요시간 변경 시에는 예약시간 재조회 요청을 보내지 않음
-      updateReservationSummary();
     }
 
     // [1] 날짜 선택 시 예약 가능 시간대 조회 후 버튼으로 표시
@@ -2663,7 +2515,7 @@
         }
 
         const occupancy = buildOccupancyFromRows(data);
-        const durationMins = getEffectiveDurationMinutes();
+        const durationMins = getSelectedDurationMinutes();
 
         let available = BOOKABLE_SLOTS.filter(function (s) {
           return slotRangeFits(occupancy, s, durationMins, date);
@@ -2763,11 +2615,6 @@
           }
           toggleMaterialItemCheckedClass(box);
           syncMaterialSummary();
-          syncScaleOnlyLoadRatioPanel();
-          if (typeof updateDurationPanel === 'function') updateDurationPanel();
-          if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
-            updateSlots();
-          }
           updateReservationSummary();
         });
       });
@@ -2776,33 +2623,14 @@
     })();
 
     (function bindDurationControls() {
-      document.querySelectorAll('input[name="durationMode"], input[name="durationManual"]').forEach(function (el) {
+      document.querySelectorAll('input[name="durationMinutes"]').forEach(function (el) {
         el.addEventListener('change', function () {
-          if (typeof updateDurationPanel === 'function') updateDurationPanel();
+          updateReservationSummary();
           if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
             updateSlots();
           }
         });
       });
-      var tonnageInput = document.getElementById('vehicleTonnageInput');
-      if (tonnageInput) {
-        tonnageInput.addEventListener('input', function () {
-          if (typeof updateDurationPanel === 'function') updateDurationPanel();
-        });
-      }
-      var tonnageInput2 = document.getElementById('vehicleTonnageInput2');
-      if (tonnageInput2) {
-        tonnageInput2.addEventListener('input', function () {
-          if (typeof updateDurationPanel === 'function') updateDurationPanel();
-        });
-      }
-      var car2 = document.getElementById('car2Input');
-      if (car2) {
-        car2.addEventListener('input', function () {
-          updateReservationSummary();
-        });
-      }
-      if (typeof updateDurationPanel === 'function') updateDurationPanel();
     })();
 
     (function bindVehicleCountAndMaterialKind() {
@@ -2831,16 +2659,9 @@
         syncVehicleTonnageFieldsLayout();
         syncMaterialKindOptionLabels();
         syncMaterialKindTwoVehicleOption();
-        requestAnimationFrame(function () {
-          syncScaleOnlyLoadRatioPanel();
-        });
         var sel = document.querySelector('input[name="vehicleCount"]:checked');
         if (sel && sel.value === '2' && car2Input) {
           try { car2Input.focus(); } catch (e) { /* ignore */ }
-        }
-        if (typeof updateDurationPanel === 'function') updateDurationPanel();
-        if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
-          updateSlots();
         }
         updateReservationSummary();
       }
@@ -2853,23 +2674,6 @@
           var t = ev && ev.target ? ev.target : r;
           if (t && t.id === 'materialKindScaleTransformer' && t.checked) {
             alertMaterialKindOption2TwoTrucksIfApplicable();
-          }
-          if (typeof updateDurationPanel === 'function') updateDurationPanel();
-          if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
-            updateSlots();
-          }
-          updateReservationSummary();
-        });
-      });
-      document.querySelectorAll('input[name="scaleOnlyLoadOver50"]').forEach(function (r) {
-        r.addEventListener('change', function () {
-          if (showsLoadOver50Question() && String(r.value) === 'yes' && r.checked) {
-            var autoEl = document.getElementById('durationModeAuto');
-            if (autoEl) autoEl.checked = true;
-          }
-          if (typeof updateDurationPanel === 'function') updateDurationPanel();
-          if (typeof updateSlots === 'function' && document.getElementById('date') && document.getElementById('date').value) {
-            updateSlots();
           }
           updateReservationSummary();
         });
@@ -2984,13 +2788,6 @@
         alert('「3. 계근대 품목과 계근대 외 품목 혼재되어 있을 경우」는 차량 대수를 2대로 선택한 경우에만 선택할 수 있습니다.');
         return;
       }
-      if (showsLoadOver50Question()) {
-        var lr50 = document.querySelector('input[name="scaleOnlyLoadOver50"]:checked');
-        if (!lr50) {
-          alert('계근대 품목이 4종 이상이면서 「1. 계근대 품목만」또는「2. 계근대 품목 + 변압기류」에 해당하시는 경우(차량 1대, 또는 차량 2대이면서 2번을 선택한 경우)에는 적재량이 차량 중량(톤) 기준 50%를 초과하는지「아니오 / 예(초과)」를 선택해 주세요.');
-          return;
-        }
-      }
       if (getFormVehicleCount() === 2 && !((form.car2 && form.car2.value) || '').trim()) {
         alert('차량 대수를 2대로 선택하신 경우 차량번호 2도 입력해 주세요.');
         return;
@@ -3008,13 +2805,6 @@
           alert('차량 대수를 2대로 선택하신 경우 차량 중량 2도 0보다 큰 값으로 입력해 주세요.');
           var ti2 = document.getElementById('vehicleTonnageInput2');
           if (ti2) { try { ti2.focus(); } catch (e2) { /* ignore */ } }
-          return;
-        }
-      }
-      if (isDurationManualMode()) {
-        var dm = document.querySelector('input[name="durationManual"]:checked');
-        if (!dm) {
-          alert('「직접 선택」을 쓰실 경우 예약 소요 시간으로 30분 또는 60분 중 하나를 선택해 주세요.');
           return;
         }
       }
@@ -3073,8 +2863,7 @@
         const date = reservationDate;
         const contact = form.contact.value.trim();
         const visitorEmail = (form.visitor_email && form.visitor_email.value) ? form.visitor_email.value.trim() : '';
-        const recDur = computeRecommendedDuration();
-        const effDur = getEffectiveDurationMinutes();
+        const effDur = getSelectedDurationMinutes();
         const vehicleTonnage = getVehicleTonnage1Value();
         const vehicleTonnage2 = getFormVehicleCount() === 2 ? getVehicleTonnage2Value() : null;
 
@@ -3147,9 +2936,9 @@
             vehicle_tonnage: vehicleTonnage,
             vehicle_tonnage_2: vehicleTonnage2,
             reservation_duration_minutes: effDur,
-            duration_mode: isDurationManualMode() ? 'manual' : 'auto',
-            recommended_duration_minutes: recDur.minutes,
-            recommended_reasons: recDur.reasons,
+            duration_mode: 'manual',
+            recommended_duration_minutes: effDur,
+            recommended_reasons: [],
             doc_url_1: null,
             doc_url_2: null
           }
@@ -3193,7 +2982,6 @@
     })();
 
     window.updateSlots = updateSlots;
-    window.updateDurationPanel = updateDurationPanel;
     window.handleFormSubmit = handleFormSubmit;
 
     (function setupReservationSummarySticky() {

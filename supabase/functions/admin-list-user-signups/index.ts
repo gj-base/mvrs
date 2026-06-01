@@ -44,6 +44,7 @@ type ProfileRow = {
   phone: string | null;
   contact_email: string | null;
   company_address: string | null;
+  is_master: boolean | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -59,6 +60,7 @@ type SignupItem = {
   contact_email: string;
   company_address: string;
   profile_updated_at: string | null;
+  is_master: boolean;
   brn: string | null;
   company_names: string[];
   branch_names: string[];
@@ -117,7 +119,7 @@ Deno.serve(async (req: Request) => {
     const { data: profileRows, error: profileErr } = await sb
       .from("user_profiles")
       .select(
-        "id, full_name, phone, contact_email, company_address, created_at, updated_at",
+        "id, full_name, phone, contact_email, company_address, is_master, created_at, updated_at",
       )
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -212,6 +214,7 @@ Deno.serve(async (req: Request) => {
         contact_email: p.contact_email ?? "",
         company_address: p.company_address ?? "",
         profile_updated_at: p.updated_at ?? null,
+        is_master: p.is_master === true,
         brn: brnSet.size ? Array.from(brnSet).join(", ") : null,
         company_names: Array.from(coSet),
         branch_names: Array.from(brSet),

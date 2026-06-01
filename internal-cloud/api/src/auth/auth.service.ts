@@ -49,6 +49,15 @@ export class AuthService {
     );
   }
 
+  async getIsMaster(userId: string): Promise<boolean> {
+    const r = await this.pg.pool.query<{ is_master: boolean }>(
+      `select coalesce(is_master, false) as is_master
+       from public.user_profiles where id = $1::uuid limit 1`,
+      [userId],
+    );
+    return r.rows[0]?.is_master === true;
+  }
+
   async signIn(email: string, password: string) {
     const em = email.trim().toLowerCase();
     if (!em || !password) {
@@ -67,9 +76,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid login credentials');
     }
     const access_token = this.issueToken(row.id, row.email);
+    const is_master = await this.getIsMaster(row.id);
     return {
       access_token,
-      user: { id: row.id, email: row.email },
+      user: { id: row.id, email: row.email, is_master },
     };
   }
 

@@ -31,6 +31,52 @@ function str(v: unknown): string {
   return String(v).trim();
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function deleteUserAccount(
+  sb: ReturnType<typeof createClient>,
+  userId: string,
+) {
+  const { data: profRow, error: profErr } = await sb
+    .from("user_profiles")
+    .select("id, is_master")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profErr) throw profErr;
+
+  if (profRow?.is_master === true) {
+    return { status: 403, body: { ok: false, error: "마스터 계정은 삭제할 수 없습니다." } };
+  }
+
+  const { error: memErr } = await sb
+    .from("user_company_memberships")
+    .delete()
+    .eq("user_id", userId);
+  if (memErr) throw memErr;
+
+  if (profRow) {
+    const { error: profileDelErr } = await sb
+      .from("user_profiles")
+      .delete()
+      .eq("id", userId);
+    if (profileDelErr) throw profileDelErr;
+  }
+
+  const { error: authDelErr } = await sb.auth.admin.deleteUser(userId);
+  if (authDelErr) {
+    if (!profRow) {
+      throw authDelErr;
+    }
+    const msg = authDelErr.message ?? String(authDelErr);
+    if (!/not found|user not found/i.test(msg)) {
+      throw authDelErr;
+    }
+  }
+
+  return { status: 200, body: { ok: true, user_id: userId } };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -70,7 +116,9 @@ Deno.serve(async (req: Request) => {
   }
 
   const action = str(body.action);
-  const sb = createClient(supabaseUrl, serviceKey);
+  const sb = createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 
   try {
     if (action === "blocked_add") {
@@ -182,6 +230,15 @@ Deno.serve(async (req: Request) => {
         if (ordErr) throw ordErr;
       }
       return json(200, { ok: true });
+    }
+
+    if (action === "delete_user") {
+      const userId = str(body.user_id);
+      if (!userId || !UUID_RE.test(userId)) {
+        return json(400, { ok: false, error: "유효한 user_id(UUID)가 필요합니다." });
+      }
+      const result = await deleteUserAccount(sb, userId);
+      return json(result.status, result.body);
     }
 
     return json(400, { ok: false, error: "Unknown action" });

@@ -32,6 +32,13 @@ export class AuthController {
     if (!user) {
       throw new UnauthorizedException();
     }
-    return { user };
+    const is_master = await this.auth.getIsMaster(user.sub);
+    return {
+      user: {
+        id: user.sub,
+        email: user.email,
+        is_master,
+      },
+    };
   }
 }

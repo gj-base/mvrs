@@ -216,15 +216,30 @@ export class SubmitReservationService {
       return { status: 200 as const, body: { ok: false, error: '관할 지사와 소속 업체를 선택해 주세요.' } };
     }
 
-    const mem = await pool.query(
-      `select 1 from public.user_company_memberships m
-       inner join public.companies c on c.id = m.company_id
-       where m.user_id = $1::uuid and m.company_id = $2::bigint and c.branch_id = $3::bigint
+    const isMaster = await this.auth.getIsMaster(user.sub);
+    const coValid = await pool.query(
+      `select 1 from public.companies
+       where id = $1::bigint and branch_id = $2::bigint and coalesce(is_active, true)
        limit 1`,
-      [user.sub, companyId, branchId],
+      [companyId, branchId],
     );
-    if (!mem.rowCount) {
-      return { status: 200 as const, body: { ok: false, error: '선택한 업체·지사에 대한 예약 권한이 없습니다.' } };
+    if (!coValid.rowCount) {
+      return {
+        status: 200 as const,
+        body: { ok: false, error: '선택한 업체·지사 조합이 올바르지 않습니다.' },
+      };
+    }
+    if (!isMaster) {
+      const mem = await pool.query(
+        `select 1 from public.user_company_memberships m
+         inner join public.companies c on c.id = m.company_id
+         where m.user_id = $1::uuid and m.company_id = $2::bigint and c.branch_id = $3::bigint
+         limit 1`,
+        [user.sub, companyId, branchId],
+      );
+      if (!mem.rowCount) {
+        return { status: 200 as const, body: { ok: false, error: '선택한 업체·지사에 대한 예약 권한이 없습니다.' } };
+      }
     }
 
     const date = str(body.reservation_date).slice(0, 10);

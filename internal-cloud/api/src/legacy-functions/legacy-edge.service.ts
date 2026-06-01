@@ -31,6 +31,8 @@ export class LegacyEdgeService {
         return this.adminManagePublicSettings(req, res, rawBody);
       case 'admin-list-user-signups':
         return this.adminListUserSignups(req, res, rawBody);
+      case 'admin-delete-user':
+        return this.adminDeleteUser(req, res, rawBody);
       case 'decrypt-reservation-pii':
         return this.decryptReservationPii(req, res, rawBody);
       case 'send-reservation-status-email':
@@ -184,6 +186,9 @@ export class LegacyEdgeService {
         }
         return res.json({ ok: true });
       }
+      if (action === 'delete_user') {
+        return this.executeDeleteUserAccount(res, String(body.user_id ?? '').trim());
+      }
       return res.status(400).json({ ok: false, error: 'Unknown action' });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -206,7 +211,7 @@ export class LegacyEdgeService {
     const limit = Number.isFinite(limRaw) && limRaw > 0 ? Math.min(Math.floor(limRaw), 2000) : 1000;
 
     const prof = await this.pg.pool.query(
-      `select id, full_name, phone, contact_email, company_address, created_at, updated_at
+      `select id, full_name, phone, contact_email, company_address, coalesce(is_master, false) as is_master, created_at, updated_at
        from public.user_profiles order by created_at desc limit $1`,
       [limit],
     );
@@ -265,6 +270,7 @@ export class LegacyEdgeService {
         contact_email: String(p.contact_email ?? ''),
         company_address: String(p.company_address ?? ''),
         profile_updated_at: (p.updated_at as string) ?? null,
+        is_master: p.is_master === true,
         brn: brnSet.size ? Array.from(brnSet).join(', ') : null,
         company_names: Array.from(coSet),
         branch_names: Array.from(brSet),
@@ -272,6 +278,72 @@ export class LegacyEdgeService {
     });
 
     return res.json({ ok: true, items });
+  }
+
+  private async adminDeleteUser(req: Request, res: Response, rawBody: unknown) {
+    const ip = checkAdminSourceIp(req, this.config.get<string>('ADMIN_ALLOWED_SOURCE_IPS') ?? '');
+    if (!ip.ok) {
+      return res.status(403).json({ ok: false, error: ip.message });
+    }
+    const body = (rawBody || {}) as { admin_secret?: string; user_id?: string };
+    const adminNotify = this.config.get<string>('ADMIN_NOTIFY_SECRET') ?? '';
+    const secret = this.adminSecret(req, body as Record<string, unknown>);
+    if (!adminNotify || !timingSafeEqualUtf8(adminNotify, secret)) {
+      return res.status(401).json({ ok: false, error: 'Unauthorized' });
+    }
+    const userId = body.user_id != null ? String(body.user_id).trim() : '';
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        userId,
+      )
+    ) {
+      return res.status(400).json({ ok: false, error: '유효한 user_id(UUID)가 필요합니다.' });
+    }
+
+    return this.executeDeleteUserAccount(res, userId);
+  }
+
+  private async executeDeleteUserAccount(res: Response, userId: string) {
+    const client = await this.pg.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const prof = await client.query<{ is_master: boolean }>(
+        `select coalesce(is_master, false) as is_master from public.user_profiles where id = $1::uuid limit 1`,
+        [userId],
+      );
+      const profRow = prof.rows[0];
+      if (profRow?.is_master === true) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ ok: false, error: '마스터 계정은 삭제할 수 없습니다.' });
+      }
+
+      await client.query(
+        `delete from public.user_company_memberships where user_id = $1::uuid`,
+        [userId],
+      );
+      if (profRow) {
+        await client.query(`delete from public.user_profiles where id = $1::uuid`, [userId]);
+      }
+
+      const authDel = await client.query(`delete from auth.users where id = $1::uuid`, [userId]);
+      if (authDel.rowCount === 0 && !profRow) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ ok: false, error: '해당 사용자를 찾을 수 없습니다.' });
+      }
+
+      await client.query('COMMIT');
+      return res.json({ ok: true, user_id: userId });
+    } catch (e) {
+      try {
+        await client.query('ROLLBACK');
+      } catch {
+        /* ignore */
+      }
+      const msg = e instanceof Error ? e.message : String(e);
+      return res.status(500).json({ ok: false, error: msg });
+    } finally {
+      client.release();
+    }
   }
 
   private async decryptReservationPii(req: Request, res: Response, rawBody: unknown) {
