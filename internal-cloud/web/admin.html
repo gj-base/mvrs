@@ -145,6 +145,10 @@
       padding: 0.45rem 0.65rem !important;
       white-space: nowrap;
     }
+    .signup-manage-col {
+      width: 1%;
+      white-space: nowrap;
+    }
     .btn-signup-delete {
       display: inline-flex;
       align-items: center;
@@ -206,7 +210,9 @@
       color: var(--kepco-blue);
       opacity: 0.9;
     }
-    #signupsTableBody tr:hover .btn-signup-delete {
+    #signupsTableBody tr:hover .btn-signup-delete,
+    #blockedDatesTableBody tr:hover .btn-signup-delete,
+    #sitePopupsTableBody tr:hover .btn-signup-delete {
       border-color: #f97066;
     }
     .btn-signup-delete:disabled,
@@ -274,11 +280,17 @@
     #sitePopupsTableBody tr.site-popup-select-row {
       cursor: pointer;
     }
-    #sitePopupsTableBody tr.site-popup-select-row:hover td:not(.site-popup-actions-cell) {
+    #sitePopupsTableBody tr.site-popup-select-row:hover td:not(.site-popup-order-cell):not(.site-popup-delete-cell) {
       background-color: rgba(0, 71, 149, 0.05);
     }
-    #sitePopupsTableBody tr.site-popup-select-row td.site-popup-actions-cell {
+    #sitePopupsTableBody tr.site-popup-select-row td.site-popup-order-cell,
+    #sitePopupsTableBody tr.site-popup-select-row td.site-popup-delete-cell {
       cursor: default;
+    }
+    .site-popup-order-col,
+    .site-popup-delete-col {
+      width: 1%;
+      white-space: nowrap;
     }
     @media (max-width: 991.98px) {
       #calendar-container.admin-layout-visible {
@@ -550,7 +562,7 @@
                     <th class="text-nowrap">사업자번호</th>
                     <th class="text-nowrap">최근 로그인</th>
                     <th class="text-nowrap">가입일시</th>
-                    <th class="text-end text-nowrap">관리</th>
+                    <th class="text-nowrap signup-manage-col text-center">관리</th>
                   </tr>
                 </thead>
                 <tbody id="signupsTableBody"></tbody>
@@ -585,7 +597,7 @@
             </div>
             <div class="table-responsive mt-4 mb-0" style="max-height:min(55vh, 420px)">
               <table class="table table-sm table-hover align-middle mb-0" id="blockedDatesTable">
-                <thead class="table-light sticky-top"><tr><th>날짜</th><th>사유</th><th></th></tr></thead>
+                <thead class="table-light sticky-top"><tr><th>날짜</th><th>사유</th><th class="text-nowrap signup-manage-col text-center">관리</th></tr></thead>
                 <tbody id="blockedDatesTableBody"></tbody>
               </table>
             </div>
@@ -608,11 +620,12 @@
               <table class="table table-sm table-hover align-middle mb-0">
                 <thead class="table-light sticky-top">
                   <tr>
-                    <th class="text-nowrap">순서</th>
+                    <th class="text-nowrap">번호</th>
                     <th class="text-nowrap">상태</th>
                     <th>제목</th>
                     <th class="text-nowrap">수정일시</th>
-                    <th class="text-end text-nowrap">순서·삭제</th>
+                    <th class="text-nowrap site-popup-order-col text-center">순서</th>
+                    <th class="text-nowrap site-popup-delete-col text-center">관리</th>
                   </tr>
                 </thead>
                 <tbody id="sitePopupsTableBody"></tbody>
@@ -712,6 +725,7 @@
           </div>
         </div>
         <div class="modal-footer border-0">
+          <button type="button" id="btnViewBookingForm" class="btn btn-outline-primary w-100 fw-bold py-2 mb-2">신청 화면 보기 (새 탭)</button>
           <div class="d-flex flex-column flex-md-row w-100 gap-2">
             <button type="button" id="btnApprove" class="btn btn-primary w-100 fw-bold py-2">승인</button>
             <button type="button" id="btnReject" class="btn btn-outline-danger w-100 fw-bold py-2">반려</button>
@@ -741,6 +755,67 @@
     var userSignupsRaw = [];
     var userSignupsLoaded = false;
     var userSignupDeleteBusy = false;
+    /** 캘린더 로드 시 예약 원본 row (신청 화면 조회용) */
+    var adminReservationRowsById = {};
+
+    var ADMIN_VIEW_STORAGE_KEY = 'mvrs_admin_view_reservation';
+
+    function buildAdminViewPayloadFromCurrentEvent() {
+      if (!currentEvent) return null;
+      var row = adminReservationRowsById[String(currentEvent.id)];
+      if (!row) return null;
+      return {
+        row: row,
+        status: (currentEvent.extendedProps && currentEvent.extendedProps.status) || row.status || '대기',
+        savedAt: Date.now()
+      };
+    }
+
+    function persistAdminViewPayload(payload) {
+      try {
+        localStorage.setItem(ADMIN_VIEW_STORAGE_KEY, JSON.stringify(payload));
+        return true;
+      } catch (e) {
+        alert('조회 데이터 저장에 실패했습니다: ' + (e.message || e));
+        return false;
+      }
+    }
+
+    function buildAdminBookingViewUrl(reservationId) {
+      var url = new URL('booking.html', window.location.href);
+      url.searchParams.set('mode', 'admin-view');
+      url.searchParams.set('id', String(reservationId));
+      return url.href;
+    }
+
+    function postAdminViewPayloadToTarget(targetWin, payload) {
+      if (!targetWin) return;
+      function postOnce() {
+        try {
+          targetWin.postMessage({
+            type: ADMIN_VIEW_STORAGE_KEY,
+            payload: payload
+          }, window.location.origin);
+        } catch (e) { /* ignore */ }
+      }
+      setTimeout(postOnce, 100);
+      setTimeout(postOnce, 600);
+    }
+
+    function openAdminBookingView() {
+      var payload = buildAdminViewPayloadFromCurrentEvent();
+      if (!payload) {
+        alert('예약 원본 데이터를 찾을 수 없습니다. 캘린더를 새로고침한 뒤 다시 시도해 주세요.');
+        return;
+      }
+      if (!persistAdminViewPayload(payload)) return;
+      var viewWin = window.open(buildAdminBookingViewUrl(payload.row.id), '_blank');
+      if (!viewWin) {
+        alert('팝업이 차단되었습니다. 브라우저에서 이 사이트의 팝업을 허용한 뒤 다시 시도해 주세요.');
+        return;
+      }
+      postAdminViewPayloadToTarget(viewWin, payload);
+    }
 
     function getSupabase() {
       if (!sbClient) {
@@ -960,6 +1035,16 @@
       }
     }
 
+    function getAdminTrashIconSvg() {
+      return (
+        '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+        '<path d="M2.5 4.5h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+        '<path d="M6 4.5V3.25A.75.75 0 0 1 6.75 2.5h2.5a.75.75 0 0 1 .75.75V4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+        '<path d="M5.25 4.5l.45 8.1c.04.66.58 1.15 1.24 1.15h2.12c.66 0 1.2-.49 1.24-1.15l.45-8.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>'
+      );
+    }
+
     function formatPopupUpdatedAt(iso) {
       if (iso == null || String(iso).trim() === '') return '—';
       try {
@@ -978,7 +1063,7 @@
       if (!rows.length) {
         var tr0 = document.createElement('tr');
         tr0.innerHTML =
-          '<td colspan="5" class="text-muted small">등록된 팝업이 없습니다. 「새 팝업 추가」로 등록하거나, DB에 <code>site_popups</code> 테이블 마이그레이션을 적용했는지 확인하세요.</td>';
+          '<td colspan="6" class="text-muted small">등록된 팝업이 없습니다. 「새 팝업 추가」로 등록하거나, DB에 <code>site_popups</code> 테이블 마이그레이션을 적용했는지 확인하세요.</td>';
         tb.appendChild(tr0);
         return;
       }
@@ -1006,16 +1091,20 @@
           '<td class="small text-nowrap text-muted">' +
           escapeHtml(uat) +
           '</td>' +
-          '<td class="text-end text-nowrap site-popup-actions-cell">' +
+          '<td class="text-center text-nowrap site-popup-order-cell site-popup-order-col">' +
           '<button type="button" class="btn btn-link btn-sm p-0 me-1 site-popup-move" data-dir="-1" data-id="' +
           escapeAttr(id) +
           '" title="위로">↑</button>' +
-          '<button type="button" class="btn btn-link btn-sm p-0 me-1 site-popup-move" data-dir="1" data-id="' +
+          '<button type="button" class="btn btn-link btn-sm p-0 site-popup-move" data-dir="1" data-id="' +
           escapeAttr(id) +
           '" title="아래로">↓</button>' +
-          '<button type="button" class="btn btn-link btn-sm text-danger p-0 site-popup-del" data-id="' +
+          '</td>' +
+          '<td class="text-center text-nowrap signup-action-cell site-popup-delete-cell site-popup-delete-col">' +
+          '<button type="button" class="btn-signup-delete site-popup-del" title="팝업 삭제" data-id="' +
           escapeAttr(id) +
-          '">삭제</button>' +
+          '">' +
+          getAdminTrashIconSvg() +
+          '<span>삭제</span></button>' +
           '</td>';
         tr.classList.add('site-popup-select-row');
         tr.setAttribute('data-popup-id', id);
@@ -1023,12 +1112,11 @@
         tr.addEventListener('click', function () {
           openSitePopupEditForm(tr.getAttribute('data-popup-id'));
         });
-        var actTd = tr.querySelector('.site-popup-actions-cell');
-        if (actTd) {
+        tr.querySelectorAll('.site-popup-order-cell, .site-popup-delete-cell').forEach(function (actTd) {
           actTd.addEventListener('click', function (e) {
             e.stopPropagation();
           });
-        }
+        });
         tb.appendChild(tr);
       });
       tb.querySelectorAll('.site-popup-move').forEach(function (btn) {
@@ -1291,7 +1379,11 @@
         tr.innerHTML =
           '<td class="small text-nowrap">' + escapeHtml(d) + '</td>' +
           '<td class="small text-truncate" style="max-width:200px" title="' + escapeAttr(rs) + '">' + escapeHtml(rs || '—') + '</td>' +
-          '<td class="text-end"><button type="button" class="btn btn-link btn-sm text-danger p-0 btn-remove-block" data-id="' + escapeAttr(id) + '" data-scope="global">삭제</button></td>';
+          '<td class="text-center text-nowrap signup-action-cell signup-manage-col"><button type="button" class="btn-signup-delete btn-remove-block" title="환입 불가일 삭제" data-id="' +
+          escapeAttr(id) +
+          '" data-scope="global">' +
+          getAdminTrashIconSvg() +
+          '<span>삭제</span></button></td>';
         tb.appendChild(tr);
       });
       tb.querySelectorAll('.btn-remove-block').forEach(function (btn) {
@@ -1554,12 +1646,7 @@
           }
         }
         var isMaster = row.is_master === true;
-        var trashIcon =
-          '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
-          '<path d="M2.5 4.5h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
-          '<path d="M6 4.5V3.25A.75.75 0 0 1 6.75 2.5h2.5a.75.75 0 0 1 .75.75V4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
-          '<path d="M5.25 4.5l.45 8.1c.04.66.58 1.15 1.24 1.15h2.12c.66 0 1.2-.49 1.24-1.15l.45-8.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>' +
-          '</svg>';
+        var trashIcon = getAdminTrashIconSvg();
         var masterIcon =
           '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
           '<path d="M8 1.75 2.75 4.25v3.5c0 3.02 2.28 5.84 5.25 6.5 2.97-.66 5.25-3.48 5.25-6.5v-3.5L8 1.75Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>' +
@@ -1579,7 +1666,7 @@
           '<td class="small text-nowrap">' + escapeHtml(brn) + '</td>' +
           '<td class="small text-nowrap text-muted">' + escapeHtml(lastSignIn) + '</td>' +
           '<td class="small text-nowrap text-muted">' + escapeHtml(createdAt) + '</td>' +
-          '<td class="text-end text-nowrap signup-action-cell">' + manageCell + '</td>';
+          '<td class="text-center text-nowrap signup-action-cell signup-manage-col">' + manageCell + '</td>';
         tb.appendChild(tr);
       });
     }
@@ -1928,11 +2015,30 @@
               visitor_email: pair.visitor_email != null ? pair.visitor_email : row.visitor_email,
             });
           });
+          adminReservationRowsById = {};
+          rows.forEach(function (row) {
+            if (row && row.id != null) adminReservationRowsById[String(row.id)] = row;
+          });
           const events = rows.map(row => {
             const dateStr = (row.reservation_date && String(row.reservation_date).substring(0, 10)) || '';
             const timeStr = (row.reservation_time && String(row.reservation_time).trim().substring(0, 5)) || '09:00';
             const startISO = dateStr + 'T' + timeStr + ':00';
-            const peopleText = row.person_info && (row.person_info.text != null ? row.person_info.text : (typeof row.person_info === 'string' ? row.person_info : JSON.stringify(row.person_info)));
+            const peopleText = (function () {
+              var pi = row.person_info;
+              if (!pi) return '';
+              if (typeof pi === 'object' && pi.text != null) return String(pi.text);
+              if (typeof pi === 'string') {
+                var s = pi.trim();
+                if (s.charAt(0) === '{') {
+                  try {
+                    var parsed = JSON.parse(s);
+                    if (parsed && parsed.text != null) return String(parsed.text);
+                  } catch (e) { /* plain name */ }
+                }
+                return pi;
+              }
+              return JSON.stringify(pi);
+            })();
             const pi = row.person_info && typeof row.person_info === 'object' ? row.person_info : {};
             const durMin = Number(row.reservation_duration_minutes) === 60
               ? 60
@@ -2193,6 +2299,11 @@
     document.getElementById('btnReject').addEventListener('click', function () {
       updateReservationStatus('반려', '이 예약을 반려하시겠습니까?');
     });
+
+    var btnViewBookingForm = document.getElementById('btnViewBookingForm');
+    if (btnViewBookingForm) {
+      btnViewBookingForm.addEventListener('click', openAdminBookingView);
+    }
 
     var btnAddBlk = document.getElementById('btnAddBlockedDate');
     if (btnAddBlk) btnAddBlk.addEventListener('click', function () { onAddBlockedDateClick(); });

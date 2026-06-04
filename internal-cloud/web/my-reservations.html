@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 예약 · 자재센터 불용자재 환입차량 예약시스템</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>
+    :root {
+      --kepco-blue: #004795;
+      --kepco-orange: #ff6600;
+      --header-login-navy: #0a2342;
+      --header-login-navy-mid: #0f3560;
+    }
+    body { background-color: #f4f7f9; font-family: 'Pretendard', sans-serif; margin: 0; padding: 0; color: #333; min-height: 100vh; }
+
+    .top-header {
+      background: white;
+      border-bottom: 3px solid var(--kepco-blue);
+      padding: 12px 4%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      width: 100%;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    .header-left { display: flex; align-items: center; }
+    .kepco-logo { height: 35px; margin-right: 18px; }
+    .system-name {
+      color: var(--kepco-blue);
+      font-weight: 800;
+      font-size: 1.35rem;
+      margin: 0;
+      border-left: 2px solid #eee;
+      padding-left: 18px;
+    }
+    .system-name-link { color: inherit; text-decoration: none; }
+    .system-name-link:hover { opacity: 0.88; }
+    .admin-link {
+      text-decoration: none;
+      color: #6c757d;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+    .admin-link:hover { color: var(--kepco-blue); }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .header-nav-guest,
+    .header-nav-user {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .header-btn-login {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 22px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(180deg, var(--header-login-navy-mid) 0%, var(--header-login-navy) 100%);
+      color: #fff !important;
+      font-weight: 800;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s;
+    }
+    .header-btn-login:hover {
+      color: #fff !important;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(10, 35, 66, 0.35);
+    }
+    .header-company-pill {
+      display: inline-block;
+      max-width: min(58vw, 320px);
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      line-height: 1.35;
+      color: #0c2748;
+      background: linear-gradient(180deg, #f0f6fc 0%, #e8f0f8 100%);
+      border: 1px solid rgba(0, 71, 149, 0.14);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      vertical-align: middle;
+    }
+    .header-logout-btn {
+      cursor: pointer;
+      color: #6c757d;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      background: none;
+      padding: 0;
+      font-family: inherit;
+      transition: color 0.2s;
+    }
+    .header-logout-btn:hover { color: var(--kepco-blue); }
+
+    @media (max-width: 768px) {
+      .system-name { font-size: 1rem; padding-left: 10px; margin-left: 10px; }
+      .kepco-logo { height: 25px; }
+      .header-company-pill {
+        font-size: 0.82rem;
+        padding: 6px 11px;
+        max-width: min(50vw, 220px);
+      }
+    }
+
+    .page-wrap { max-width: 1100px; margin: 28px auto 48px; padding: 0 16px; }
+    .page-title { font-size: 1.5rem; font-weight: 800; color: var(--kepco-blue); margin-bottom: 8px; }
+    .page-desc { color: #64748b; font-size: 0.95rem; margin-bottom: 24px; }
+    .list-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+      overflow: hidden;
+    }
+    .res-table { margin: 0; font-size: 0.9rem; }
+    .res-table th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: #475569;
+      white-space: nowrap;
+    }
+    .res-table td { vertical-align: middle; }
+    .badge-status { font-weight: 700; }
+    .btn-action { font-size: 0.8rem; font-weight: 600; padding: 4px 10px; }
+    .empty-state { padding: 48px 24px; text-align: center; color: #64748b; }
+    .loading-state { padding: 48px; text-align: center; color: var(--kepco-blue); }
+    .list-pagination {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px 14px;
+      padding: 16px 20px;
+      border-top: 1px solid #e2e8f0;
+      background: #fafbfc;
+    }
+    .list-pagination .page-info {
+      font-size: 0.88rem;
+      color: #64748b;
+      min-width: 120px;
+      text-align: center;
+    }
+    @media (max-width: 768px) {
+      .res-table thead { display: none; }
+      .res-table tbody tr {
+        display: block;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 12px 16px;
+      }
+      .res-table tbody td {
+        display: block;
+        border: none;
+        padding: 4px 0;
+      }
+      .res-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: #64748b;
+        display: inline-block;
+        min-width: 72px;
+        margin-right: 8px;
+      }
+      .res-table tbody td.actions-cell { margin-top: 8px; }
+      .res-table tbody td.actions-cell::before { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top-header">
+    <div class="header-left">
+      <img src="https://lh3.googleusercontent.com/d/196cwAcdh72FSYj38Lj5g9mS2rSZ12vXQ" class="kepco-logo" alt="KEPCO">
+      <h1 class="system-name"><a href="index.html" class="system-name-link">자재센터 불용자재 환입차량 예약시스템</a></h1>
+    </div>
+    <div class="header-actions" id="headerAuthRoot">
+      <div class="header-nav-guest" id="headerNavGuest">
+        <a href="index.html" class="admin-link">🏠 메인 화면</a>
+        <a href="login.html?next=my-reservations.html" class="header-btn-login">로그인</a>
+        <a href="admin.html" class="admin-link"><span>🔒 관리자 인증</span></a>
+      </div>
+      <div class="header-nav-user" id="headerNavUser" hidden>
+        <span class="header-company-pill" id="headerCompanyDisplay" title=""></span>
+        <a href="index.html" class="admin-link">🏠 메인 화면</a>
+        <a href="booking.html" class="admin-link">📅 예약 신청</a>
+        <button type="button" class="header-logout-btn" id="headerLogoutBtn">로그아웃</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="page-wrap">
+    <h2 class="page-title">내 예약</h2>
+    <p class="page-desc">소속 업체로 접수한 예약 목록입니다. <strong>승인 대기</strong> 건은 수정·신청 취소가 가능하고, 승인·반려 건은 상세 조회만 할 수 있습니다.</p>
+
+    <div class="list-card">
+      <div id="listLoading" class="loading-state">
+        <div class="spinner-border text-primary mb-2" role="status"></div>
+        <div>목록을 불러오는 중입니다…</div>
+      </div>
+      <div id="listEmpty" class="empty-state d-none">
+        <p class="mb-3">등록된 예약이 없습니다.</p>
+        <a href="booking.html" class="btn btn-primary">새 예약 신청</a>
+      </div>
+      <div id="listTableWrap" class="table-responsive d-none">
+        <table class="table res-table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>예약일</th>
+              <th>시간</th>
+              <th>지사</th>
+              <th>업체</th>
+              <th>차량</th>
+              <th>상태</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+      </div>
+      <nav id="listPagination" class="list-pagination d-none" aria-label="목록 페이지">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="pagePrev">이전</button>
+        <span class="page-info" id="pageInfo">1 / 1</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="pageNext">다음</button>
+      </nav>
+    </div>
+  </div>
+
+  <script src="mvrs-api-client.js"></script>
+  <script src="config.js"></script>
+  <script>
+    (function () {
+      var sbClient = null;
+      function getSupabase() {
+        if (!sbClient) {
+          sbClient = window.supabase.createClient('', '');
+        }
+        return sbClient;
+      }
+
+      function redirectLogin(msg) {
+        if (msg) alert(msg);
+        var next = encodeURIComponent('my-reservations.html');
+        window.location.replace('login.html?next=' + next);
+      }
+
+      async function ensureSession(sb) {
+        var userRes = await sb.auth.getUser();
+        if (userRes.data && userRes.data.user && !userRes.error) return true;
+        var refresh = await sb.auth.refreshSession();
+        if (refresh.data && refresh.data.session) return true;
+        try { await sb.auth.signOut(); } catch (e) { /* ignore */ }
+        return false;
+      }
+
+      function statusBadgeClass(st) {
+        if (st === '승인') return 'bg-primary';
+        if (st === '반려') return 'bg-danger';
+        return 'bg-warning text-dark';
+      }
+
+      function escapeHtml(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+      }
+
+      function bookingUrl(mode, id) {
+        var u = new URL('booking.html', window.location.href);
+        u.searchParams.set('mode', mode);
+        u.searchParams.set('id', String(id));
+        return u.href;
+      }
+
+      var PAGE_SIZE = 10;
+      var currentPage = 1;
+      var totalPages = 0;
+      var listTotal = 0;
+
+      function getPageFromUrl() {
+        try {
+          var p = parseInt(new URLSearchParams(window.location.search).get('page') || '1', 10);
+          return Number.isFinite(p) && p >= 1 ? p : 1;
+        } catch (e) {
+          return 1;
+        }
+      }
+
+      function setPageInUrl(page) {
+        try {
+          var u = new URL(window.location.href);
+          if (page <= 1) u.searchParams.delete('page');
+          else u.searchParams.set('page', String(page));
+          history.replaceState(null, '', u.pathname + u.search + u.hash);
+        } catch (e) { /* ignore */ }
+      }
+
+      function renderRow(item) {
+        var st = item.status || '대기';
+        var dateStr = item.reservation_date ? String(item.reservation_date).substring(0, 10) : '—';
+        var timeStr = item.reservation_time ? String(item.reservation_time).substring(0, 5) : '—';
+        var branch = item.branch_name || '—';
+        var company = item.company_label || item.company_name || '—';
+        var car = item.car_number_1 || '—';
+        var actions = '';
+        if (st === '대기') {
+          actions =
+            '<a class="btn btn-outline-primary btn-action me-1" href="' + escapeHtml(bookingUrl('edit', item.id)) + '">수정</a>' +
+            '<button type="button" class="btn btn-outline-danger btn-action btn-cancel" data-id="' + escapeHtml(String(item.id)) + '">신청 취소</button>';
+        } else {
+          actions =
+            '<a class="btn btn-outline-secondary btn-action" href="' + escapeHtml(bookingUrl('view', item.id)) + '">상세</a>';
+        }
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td data-label="예약일">' + escapeHtml(dateStr) + '</td>' +
+          '<td data-label="시간">' + escapeHtml(timeStr) + '</td>' +
+          '<td data-label="지사">' + escapeHtml(branch) + '</td>' +
+          '<td data-label="업체">' + escapeHtml(company) + '</td>' +
+          '<td data-label="차량">' + escapeHtml(car) + '</td>' +
+          '<td data-label="상태"><span class="badge badge-status ' + statusBadgeClass(st) + '">' + escapeHtml(st) + '</span></td>' +
+          '<td class="actions-cell" data-label="">' + actions + '</td>';
+        return tr;
+      }
+
+      function updatePaginationUI() {
+        var nav = document.getElementById('listPagination');
+        var info = document.getElementById('pageInfo');
+        var prev = document.getElementById('pagePrev');
+        var next = document.getElementById('pageNext');
+        if (!nav || !info || !prev || !next) return;
+        if (totalPages <= 1) {
+          nav.classList.add('d-none');
+          return;
+        }
+        nav.classList.remove('d-none');
+        info.textContent = currentPage + ' / ' + totalPages + ' (총 ' + listTotal + '건)';
+        prev.disabled = currentPage <= 1;
+        next.disabled = currentPage >= totalPages;
+      }
+
+      function bindCancelButtons(sb) {
+        var body = document.getElementById('listBody');
+        if (!body) return;
+        body.querySelectorAll('.btn-cancel').forEach(function (btn) {
+          btn.addEventListener('click', async function () {
+            var id = btn.getAttribute('data-id');
+            if (!id) return;
+            if (!window.confirm('이 예약 신청을 취소하면 삭제되며 복구할 수 없습니다. 계속하시겠습니까?')) return;
+            btn.disabled = true;
+            try {
+              var delRes = await sb.functions.invoke('my-reservations', {
+                body: { action: 'delete', reservation_id: id },
+              });
+              if (delRes.error) {
+                alert(delRes.error.message || '취소 처리 오류');
+                btn.disabled = false;
+                return;
+              }
+              if (!delRes.data || !delRes.data.ok) {
+                alert((delRes.data && delRes.data.error) ? delRes.data.error : '취소에 실패했습니다.');
+                btn.disabled = false;
+                return;
+              }
+              var reloadPage = currentPage;
+              if (listTotal > 0 && (listTotal - 1) <= (reloadPage - 1) * PAGE_SIZE && reloadPage > 1) {
+                reloadPage = reloadPage - 1;
+              }
+              await loadList(reloadPage);
+            } catch (e) {
+              alert('처리 중 오류: ' + (e.message || e));
+              btn.disabled = false;
+            }
+          });
+        });
+      }
+
+      async function loadList(page) {
+        var loading = document.getElementById('listLoading');
+        var empty = document.getElementById('listEmpty');
+        var wrap = document.getElementById('listTableWrap');
+        var body = document.getElementById('listBody');
+        var nav = document.getElementById('listPagination');
+        var reqPage = page != null ? page : getPageFromUrl();
+        if (!Number.isFinite(reqPage) || reqPage < 1) reqPage = 1;
+
+        loading.classList.remove('d-none');
+        empty.classList.add('d-none');
+        wrap.classList.add('d-none');
+        if (nav) nav.classList.add('d-none');
+
+        try {
+          var sb = getSupabase();
+          if (!(await ensureSession(sb))) {
+            redirectLogin('로그인이 필요합니다.');
+            return;
+          }
+          var res = await sb.functions.invoke('my-reservations', {
+            body: { action: 'list', page: reqPage, page_size: PAGE_SIZE },
+          });
+          if (res.error) {
+            var msg = res.error.message || String(res.error);
+            if (/non-2xx|401|로그인/i.test(msg)) {
+              redirectLogin('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
+              return;
+            }
+            alert('목록 조회 오류: ' + msg);
+            loading.classList.add('d-none');
+            return;
+          }
+          var data = res.data;
+          if (!data || !data.ok) {
+            alert((data && data.error) ? data.error : '목록을 불러오지 못했습니다.');
+            loading.classList.add('d-none');
+            return;
+          }
+
+          listTotal = Number(data.total) || 0;
+          totalPages = Number(data.total_pages) || 0;
+          currentPage = Number(data.page) || reqPage;
+          setPageInUrl(currentPage);
+
+          loading.classList.add('d-none');
+          var items = data.items || [];
+
+          if (listTotal === 0 || !items.length) {
+            if (listTotal > 0 && currentPage > 1) {
+              await loadList(currentPage - 1);
+              return;
+            }
+            empty.classList.remove('d-none');
+            updatePaginationUI();
+            return;
+          }
+
+          body.innerHTML = '';
+          items.forEach(function (item) {
+            body.appendChild(renderRow(item));
+          });
+          wrap.classList.remove('d-none');
+          bindCancelButtons(sb);
+          updatePaginationUI();
+        } catch (e) {
+          console.warn(e);
+          loading.classList.add('d-none');
+          alert('목록을 불러오는 중 오류가 발생했습니다.');
+        }
+      }
+
+      document.getElementById('pagePrev').addEventListener('click', function () {
+        if (currentPage > 1) loadList(currentPage - 1);
+      });
+      document.getElementById('pageNext').addEventListener('click', function () {
+        if (currentPage < totalPages) loadList(currentPage + 1);
+      });
+
+      loadList(getPageFromUrl());
+    })();
+
+    (function initIndexHeaderAuth() {
+      var sbClient = null;
+      function getSb() {
+        if (!sbClient) {
+          if (typeof MVRS_API_BASE === 'undefined' && typeof window.MVRS_API_BASE === 'undefined') return null;
+          sbClient = window.supabase.createClient('', '');
+        }
+        return sbClient;
+      }
+
+      var guestEl = document.getElementById('headerNavGuest');
+      var userEl = document.getElementById('headerNavUser');
+      var companyEl = document.getElementById('headerCompanyDisplay');
+      var logoutBtn = document.getElementById('headerLogoutBtn');
+      if (!guestEl || !userEl || !companyEl) return;
+
+      function setGuestVisible(yes) {
+        guestEl.hidden = !yes;
+        userEl.hidden = yes;
+      }
+
+      function formatNameList(names) {
+        var uniq = [];
+        (names || []).forEach(function (n) {
+          var s = n != null ? String(n).trim() : '';
+          if (s && uniq.indexOf(s) === -1) uniq.push(s);
+        });
+        if (uniq.length === 0) return { short: '', full: '' };
+        var first = uniq[0];
+        if (uniq.length === 1) return { short: first, full: first };
+        return { short: first, full: '' };
+      }
+
+      function formatCompanyNames(rows) {
+        var raw = [];
+        (rows || []).forEach(function (row) {
+          var c = row && row.companies;
+          var n = c && c.name ? String(c.name).trim() : '';
+          if (n) raw.push(n);
+        });
+        return formatNameList(raw);
+      }
+
+      function displayNameFromSession(session) {
+        var meta = (session.user && session.user.user_metadata) || {};
+        var fn = (meta.full_name && String(meta.full_name).trim()) || '';
+        if (fn) return { short: fn, full: '' };
+        var email = (session.user && session.user.email) || '';
+        var at = email.indexOf('@');
+        var local = at > 0 ? email.slice(0, at) : email;
+        return { short: (local && String(local).trim()) || '회원', full: '' };
+      }
+
+      async function applySession(session) {
+        var sb = getSb();
+        if (!session || !sb) {
+          setGuestVisible(true);
+          companyEl.textContent = '';
+          companyEl.removeAttribute('title');
+          return;
+        }
+        setGuestVisible(false);
+        companyEl.textContent = '불러오는 중…';
+        try {
+          var fmt = { short: '', full: '' };
+          var rRpc = await sb.rpc('get_my_company_names_for_header');
+          if (!rRpc.error && Array.isArray(rRpc.data) && rRpc.data.length) {
+            fmt = formatNameList(rRpc.data);
+          }
+          if (!fmt.short) {
+            var r = await sb.from('user_company_memberships').select('companies(name)');
+            if (r.error) throw r.error;
+            fmt = formatCompanyNames(r.data || []);
+          }
+          if (!fmt.short) fmt = displayNameFromSession(session);
+          companyEl.textContent = fmt.short;
+          if (fmt.full) companyEl.setAttribute('title', fmt.full);
+          else companyEl.removeAttribute('title');
+        } catch (e) {
+          console.warn(e);
+          var fb = displayNameFromSession(session);
+          companyEl.textContent = fb.short;
+          if (fb.full) companyEl.setAttribute('title', fb.full);
+          else companyEl.removeAttribute('title');
+        }
+      }
+
+      var sb = getSb();
+      if (!sb) {
+        setGuestVisible(true);
+        return;
+      }
+
+      sb.auth.getSession().then(function (res) {
+        applySession(res.data && res.data.session ? res.data.session : null);
+      });
+
+      sb.auth.onAuthStateChange(function (_evt, session) {
+        applySession(session);
+      });
+
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+          sb.auth.signOut().then(function () {
+            window.location.href = 'index.html';
+          }).catch(function (e) {
+            console.warn(e);
+            window.location.href = 'index.html';
+          });
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

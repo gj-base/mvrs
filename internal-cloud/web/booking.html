@@ -7,7 +7,12 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
   <style>
-    :root { --kepco-blue: #004795; --kepco-orange: #ff6600; }
+    :root {
+      --kepco-blue: #004795;
+      --kepco-orange: #ff6600;
+      --header-login-navy: #0a2342;
+      --header-login-navy-mid: #0f3560;
+    }
     body { background-color: #f4f7f9; font-family: 'Pretendard', sans-serif; margin: 0; padding: 0; color: #333; }
     
     /* 1. 와이드 헤더: 전체 너비 확장 및 요소 배치 */
@@ -49,6 +54,59 @@
       transition: 0.2s;
     }
     .admin-link:hover { color: var(--kepco-blue); }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .header-nav-guest,
+    .header-nav-user {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .header-btn-login {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 22px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(180deg, var(--header-login-navy-mid) 0%, var(--header-login-navy) 100%);
+      color: #fff !important;
+      font-weight: 800;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s;
+    }
+    .header-btn-login:hover {
+      color: #fff !important;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(10, 35, 66, 0.35);
+    }
+    .header-company-pill {
+      display: inline-block;
+      max-width: min(58vw, 320px);
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      line-height: 1.35;
+      color: #0c2748;
+      background: linear-gradient(180deg, #f0f6fc 0%, #e8f0f8 100%);
+      border: 1px solid rgba(0, 71, 149, 0.14);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      vertical-align: middle;
+    }
 
     .header-logout-btn {
       cursor: pointer;
@@ -201,6 +259,30 @@
     
     /* 로딩 오버레이 */
     .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); z-index: 2000; justify-content: center; align-items: center; flex-direction: column; }
+    /* 내 예약 조회·수정: 데이터 로드 전 빈 폼 노출 방지 */
+    .booking-reservation-fetch-loader {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1800;
+      background: rgba(248, 250, 252, 0.55);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+    }
+    html.booking-reservation-loading .booking-reservation-fetch-loader {
+      display: flex;
+    }
+    html.booking-reservation-loading .container.booking-layout {
+      filter: blur(6px);
+      opacity: 0.42;
+      pointer-events: none;
+      user-select: none;
+      transition: filter 0.2s ease, opacity 0.2s ease;
+    }
     .loader-progress-area { width: min(340px, 88vw); margin-top: 14px; text-align: left; }
     .loader-progress-area .progress { border-radius: 999px; overflow: hidden; background: #e2e8f0; }
     .loader-progress-area .progress-bar { background-color: var(--kepco-blue); transition: width 0.12s ease-out; }
@@ -661,9 +743,112 @@
     html { scroll-behavior: smooth; }
     #form-section { scroll-margin-top: 88px; }
 
+    body.admin-view-mode .picker-dropdown { display: none !important; }
+    body.admin-view-mode #resForm input:not([type="hidden"]):not(.material-checkbox):not(.btn-check):not(#safetyRulesAck),
+    body.admin-view-mode #resForm textarea,
+    body.admin-view-mode #resForm select {
+      pointer-events: none;
+      background-color: #f8f9fa;
+    }
+    body.admin-view-mode .material-checkbox,
+    body.admin-view-mode .time-slot-btn,
+    body.admin-view-mode .cal-day,
+    body.admin-view-mode .cal-nav-btn,
+    body.admin-view-mode .btn-check + label {
+      pointer-events: none;
+    }
+    /* 조회 모드: 선택한 환입 품목 강조, 미선택은 흐리게 */
+    body.admin-view-mode .material-item.is-checked {
+      background: #dbeafe;
+      border: 2px solid var(--kepco-blue);
+      box-shadow: 0 2px 8px rgba(0, 71, 149, 0.18);
+    }
+    body.admin-view-mode .material-item.is-checked .item-name {
+      color: var(--kepco-blue);
+      font-weight: 800;
+      font-size: 0.98rem;
+    }
+    body.admin-view-mode .material-item.is-checked .material-checkbox:disabled {
+      opacity: 1;
+      background-color: var(--kepco-blue);
+      border-color: var(--kepco-blue);
+    }
+    body.admin-view-mode .material-item:not(.is-checked) {
+      opacity: 0.38;
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+    }
+    body.admin-view-mode .material-group-title {
+      font-size: 1rem;
+    }
+    /* 조회 모드: 차량 대수·자재 종류·소요시간 라디오 선택값 강조 */
+    body.admin-view-mode .btn-check:checked + label {
+      opacity: 1 !important;
+      background-color: var(--kepco-blue) !important;
+      border-color: var(--kepco-blue) !important;
+      color: #fff !important;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0, 71, 149, 0.22);
+    }
+    body.admin-view-mode .btn-check:not(:checked) + label {
+      opacity: 0.4;
+      background-color: #f1f5f9 !important;
+      color: #64748b !important;
+    }
+    body.admin-view-mode .time-slot-btn.selected:disabled {
+      opacity: 1;
+      background: var(--kepco-blue);
+      color: #fff;
+      border-color: var(--kepco-blue);
+    }
+    body.admin-view-mode #safetyRulesAck {
+      opacity: 1 !important;
+      pointer-events: none;
+      filter: none;
+    }
+    body.admin-view-mode #safetyRulesAck:checked {
+      opacity: 1 !important;
+      background-color: var(--kepco-blue) !important;
+      border-color: var(--kepco-blue) !important;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e") !important;
+    }
+    body.admin-view-mode #headerCompanyDisplay,
+    body.admin-view-mode #headerLogoutBtn { display: none !important; }
+    body.admin-view-embed .top-header { display: none; }
+    body.admin-view-embed #adminViewBanner { display: none !important; }
+    body.admin-view-embed .container.booking-layout {
+      margin-top: 12px;
+      margin-bottom: 40px;
+    }
+    body.admin-view-embed .container.booking-layout > .alert-primary { display: none !important; }
+    body.admin-view-mode .card-header.view-mode-title::after {
+      content: ' (조회)';
+      font-weight: 600;
+      font-size: 0.85em;
+      opacity: 0.85;
+    }
+
   </style>
 </head>
 <body>
+
+  <div id="bookingReservationFetchLoader" class="booking-reservation-fetch-loader" hidden aria-live="polite" aria-busy="true">
+    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+      <span class="visually-hidden">로딩 중</span>
+    </div>
+    <p class="fw-bold text-primary mb-0 px-3 text-center" id="bookingReservationFetchMessage">예약 정보를 불러오는 중입니다...</p>
+  </div>
+  <script>
+    (function () {
+      try {
+        var m = new URLSearchParams(location.search).get('mode');
+        if (m !== 'view' && m !== 'edit') return;
+        document.documentElement.classList.add('booking-reservation-loading');
+        var el = document.getElementById('bookingReservationFetchLoader');
+        if (el) el.hidden = false;
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
 
   <div id="loader" class="loading-overlay">
     <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
@@ -684,13 +869,41 @@
       <img src="https://lh3.googleusercontent.com/d/196cwAcdh72FSYj38Lj5g9mS2rSZ12vXQ" class="kepco-logo" alt="KEPCO">
       <h1 class="system-name"><a href="index.html" class="system-name-link">자재센터 불용자재 환입차량 예약시스템</a></h1>
     </div>
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-      <a href="index.html" class="admin-link">🏠 메인 화면</a>
-      <button type="button" class="header-logout-btn" id="bookingHeaderLogoutBtn">로그아웃</button>
+    <div class="header-actions" id="headerAuthRoot">
+      <div class="header-nav-guest" id="headerNavGuest">
+        <a href="index.html" class="admin-link">🏠 메인 화면</a>
+        <a href="login.html?next=booking.html" class="header-btn-login">로그인</a>
+      </div>
+      <div class="header-nav-user" id="headerNavUser" hidden>
+        <span class="header-company-pill" id="headerCompanyDisplay" title=""></span>
+        <a href="index.html" class="admin-link">🏠 메인 화면</a>
+        <a href="my-reservations.html" class="admin-link" id="bookingHeaderMyResLink">📋 내 예약</a>
+        <button type="button" class="header-logout-btn" id="headerLogoutBtn">로그아웃</button>
+      </div>
     </div>
   </header>
 
   <div class="container booking-layout">
+
+    <div id="adminViewBanner" class="alert alert-warning border-0 shadow-sm mb-4 d-none" role="status">
+      <div>
+        <strong>관리자 조회 모드</strong>
+        <span class="text-muted ms-1">업체가 제출한 예약 신청 화면입니다. 수정할 수 없습니다.</span>
+        <span class="badge ms-2" id="adminViewStatusBadge">—</span>
+      </div>
+    </div>
+
+    <div id="userViewBanner" class="alert alert-info border-0 shadow-sm mb-4 d-none" role="status">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+          <strong id="userViewBannerTitle">예약 상세</strong>
+          <span class="text-muted ms-1" id="userViewBannerHint">조회 전용입니다.</span>
+          <span class="badge ms-2" id="userViewStatusBadge">—</span>
+        </div>
+        <a href="my-reservations.html" class="btn btn-sm btn-outline-primary" id="userViewBackListBtn">← 내 예약 목록</a>
+      </div>
+      <div id="userViewDocLinks" class="small mt-2 d-none"></div>
+    </div>
     
     <div id="form-section">
       <div class="alert alert-primary border-0 shadow-sm mb-4 d-flex align-items-center">
@@ -703,7 +916,7 @@
       <div class="row g-3 g-lg-4 align-items-start booking-main-row">
         <div class="col-lg-9">
       <div class="card">
-        <div class="card-header text-center">방문 예약 신청서</div>
+        <div class="card-header text-center view-mode-title">방문 예약 신청서</div>
         <div class="card-body p-4 p-md-5">
           <form id="resForm">
             <div class="row g-4 date-time-row">
@@ -1167,6 +1380,25 @@
       setLoaderMainMessage('예약 정보를 안전하게 처리 중입니다...');
     }
 
+    function showReservationFetchLoading(message) {
+      document.documentElement.classList.add('booking-reservation-loading');
+      var overlay = document.getElementById('bookingReservationFetchLoader');
+      if (overlay) {
+        overlay.hidden = false;
+        var msgEl = document.getElementById('bookingReservationFetchMessage');
+        if (msgEl && message) msgEl.textContent = message;
+      }
+    }
+
+    function hideReservationFetchLoading() {
+      document.documentElement.classList.remove('booking-reservation-loading');
+      var overlay = document.getElementById('bookingReservationFetchLoader');
+      if (overlay) {
+        overlay.hidden = true;
+        overlay.setAttribute('aria-busy', 'false');
+      }
+    }
+
     var sbClient = null;
     function getSupabase() {
         if (!sbClient) {
@@ -1198,12 +1430,35 @@
       return msg;
     }
 
+    /** localStorage 세션이 아닌 Supabase 서버 기준으로 로그인 유효성 확인 */
     async function ensureActiveBookingSession(sb) {
-      var res = await sb.auth.getSession();
-      var session = res && res.data && res.data.session;
-      if (session) return { ok: true };
+      var sessWrap = await sb.auth.getSession();
+      var hadLocalSession = !!(sessWrap && sessWrap.data && sessWrap.data.session);
+      var userRes = await sb.auth.getUser();
+      if (userRes.data && userRes.data.user && !userRes.error) {
+        return { ok: true };
+      }
+      var refreshRes = await sb.auth.refreshSession();
+      if (refreshRes.data && refreshRes.data.session && refreshRes.data.user) {
+        return { ok: true };
+      }
       try { await sb.auth.signOut(); } catch (e) { /* ignore */ }
-      return { ok: false, message: '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.' };
+      if (hadLocalSession) {
+        return {
+          ok: false,
+          reason: 'session_expired',
+          message: '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.',
+        };
+      }
+      return { ok: false, reason: 'not_logged_in' };
+    }
+
+    function bookingAuthRedirectMessage(authCheck, fallbackForEntry) {
+      if (authCheck.message) return authCheck.message;
+      if (authCheck.reason === 'session_expired') {
+        return '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.';
+      }
+      return fallbackForEntry || '예약 신청은 로그인 후 이용할 수 있습니다.';
     }
 
     /** 비로그인 시 예약 페이지 접근 차단 */
@@ -1212,7 +1467,7 @@
         var sb = getSupabase();
         var authCheck = await ensureActiveBookingSession(sb);
         if (!authCheck.ok) {
-          redirectToLogin(authCheck.message || '예약 신청은 로그인 후 이용할 수 있습니다.');
+          redirectToLogin(bookingAuthRedirectMessage(authCheck, '예약 신청은 로그인 후 이용할 수 있습니다.'));
           return false;
         }
         return true;
@@ -1244,27 +1499,6 @@
       }
     }
 
-    (function bindBookingHeaderLogout() {
-      var btn = document.getElementById('bookingHeaderLogoutBtn');
-      if (!btn) return;
-      btn.addEventListener('click', function () {
-        try {
-          var sb = getSupabase();
-          btn.disabled = true;
-          sb.auth.signOut().then(function () {
-            window.location.replace(new URL('index.html', window.location.href).href);
-          }).catch(function (e) {
-            console.warn(e);
-            alert('로그아웃 처리 중 오류가 발생했습니다.');
-            btn.disabled = false;
-          });
-        } catch (e) {
-          console.warn(e);
-          alert('로그아웃을 진행할 수 없습니다. config.js 설정을 확인해 주세요.');
-          btn.disabled = false;
-        }
-      });
-    })();
 
     var masterBranches = [];
     var masterCompanies = [];
@@ -1284,6 +1518,549 @@
     var loggedInMembershipRows = [];
     /** true: 전 지사·업체 대리 예약 (user_profiles.is_master) */
     var isMasterAccount = false;
+    /** 관리자 페이지에서 연 예약 신청 화면 조회 모드 */
+    var isAdminViewMode = false;
+    var adminViewReservationStatus = '';
+    var adminViewHydrated = false;
+    var adminViewMessageListenerBound = false;
+    var ADMIN_VIEW_STORAGE_KEY = 'mvrs_admin_view_reservation';
+
+    var isUserViewMode = false;
+    var isUserEditMode = false;
+    var editReservationId = null;
+    var userReservationStatus = '';
+    var userReservationLoaded = false;
+
+    function detectAdminViewMode() {
+      try {
+        var p = new URLSearchParams(window.location.search);
+        return p.get('mode') === 'admin-view';
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function detectUserViewMode() {
+      try {
+        return new URLSearchParams(window.location.search).get('mode') === 'view';
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function detectUserEditMode() {
+      try {
+        return new URLSearchParams(window.location.search).get('mode') === 'edit';
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function getReservationIdFromUrl() {
+      try {
+        var id = new URLSearchParams(window.location.search).get('id');
+        return id != null && String(id).trim() !== '' ? String(id).trim() : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function invokeMyReservations(body) {
+      var sb = getSupabase();
+      return sb.functions.invoke('my-reservations', { body: body });
+    }
+
+    function applyUserViewReadOnlyUI() {
+      document.body.classList.add('admin-view-mode', 'user-view-mode');
+      document.title = '예약 상세 · 내 예약';
+      var banner = document.getElementById('userViewBanner');
+      if (banner) banner.classList.remove('d-none');
+      var titleEl = document.getElementById('userViewBannerTitle');
+      if (titleEl) titleEl.textContent = '예약 상세';
+      var hintEl = document.getElementById('userViewBannerHint');
+      if (hintEl) hintEl.textContent = '승인·반려된 예약은 조회만 가능합니다.';
+      var statusBadge = document.getElementById('userViewStatusBadge');
+      if (statusBadge) {
+        var st = userReservationStatus || '대기';
+        statusBadge.textContent = st;
+        statusBadge.className = 'badge ms-2 ' + (
+          st === '승인' ? 'bg-primary' : (st === '반려' ? 'bg-danger' : 'bg-warning text-dark')
+        );
+      }
+      var infoAlert = document.querySelector('#form-section > .alert-primary');
+      if (infoAlert) infoAlert.classList.add('d-none');
+      var submitBtn = document.getElementById('submitBtn');
+      if (submitBtn) {
+        var submitWrap = submitBtn.closest('.col-12');
+        if (submitWrap) submitWrap.classList.add('d-none');
+      }
+      var safetyOpen = document.getElementById('openSafetyRulesModal');
+      if (safetyOpen) safetyOpen.classList.add('d-none');
+      document.querySelectorAll('#resForm input, #resForm textarea, #resForm select, #resForm button').forEach(function (el) {
+        if (el.type === 'hidden') return;
+        if (el.id === 'safetyRulesAck') return;
+        el.disabled = true;
+      });
+      var branchInp = document.getElementById('branchSearchInput');
+      var companyInp = document.getElementById('companySearchInput');
+      if (branchInp) branchInp.readOnly = true;
+      if (companyInp) companyInp.readOnly = true;
+      var calPrev = document.getElementById('calPrev');
+      var calNext = document.getElementById('calNext');
+      if (calPrev) calPrev.disabled = true;
+      if (calNext) calNext.disabled = true;
+      applyAdminViewSafetyAckChecked();
+      var cardHeader = document.querySelector('.card-header.view-mode-title');
+      if (cardHeader) cardHeader.textContent = '방문 예약 신청서';
+    }
+
+    function applyUserEditModeUI() {
+      var banner = document.getElementById('userViewBanner');
+      if (banner) banner.classList.remove('d-none');
+      var titleEl = document.getElementById('userViewBannerTitle');
+      if (titleEl) titleEl.textContent = '예약 수정';
+      var hintEl = document.getElementById('userViewBannerHint');
+      if (hintEl) hintEl.textContent = '승인 대기 상태의 예약만 수정할 수 있습니다.';
+      var statusBadge = document.getElementById('userViewStatusBadge');
+      if (statusBadge) {
+        statusBadge.textContent = userReservationStatus || '대기';
+        statusBadge.className = 'badge ms-2 bg-warning text-dark';
+      }
+      var submitBtn = document.getElementById('submitBtn');
+      if (submitBtn) submitBtn.textContent = '예약 수정 저장';
+      var cardHeader = document.querySelector('.card-header.view-mode-title');
+      if (cardHeader) cardHeader.textContent = '방문 예약 신청서 (수정)';
+      document.title = '예약 수정 · 내 예약';
+    }
+
+    function showUserViewDocLinks(row) {
+      var wrap = document.getElementById('userViewDocLinks');
+      if (!wrap) return;
+      var parts = [];
+      if (row.doc_url_1) {
+        parts.push('<a href="' + String(row.doc_url_1).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">구비서류 1</a>');
+      }
+      if (row.doc_url_2) {
+        parts.push('<a href="' + String(row.doc_url_2).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">구비서류 2</a>');
+      }
+      if (!parts.length) {
+        wrap.classList.add('d-none');
+        return;
+      }
+      wrap.innerHTML = '<span class="text-muted">첨부 서류:</span> ' + parts.join(' · ');
+      wrap.classList.remove('d-none');
+    }
+
+    function bookingUrlWithMode(mode, id) {
+      var u = new URL('booking.html', window.location.href);
+      u.searchParams.set('mode', mode);
+      u.searchParams.set('id', String(id));
+      return u.href;
+    }
+
+    async function bootstrapUserReservationMode() {
+      showReservationFetchLoading('예약 정보를 불러오는 중입니다...');
+      try {
+        editReservationId = getReservationIdFromUrl();
+        if (!editReservationId) {
+          alert('예약 ID가 없습니다.');
+          window.location.replace(new URL('my-reservations.html', window.location.href).href);
+          return;
+        }
+        var ok = await ensureBookingAuthOrRedirect();
+        if (!ok) return;
+        var res = await invokeMyReservations({
+          action: 'get',
+          reservation_id: editReservationId,
+        });
+        if (res.error) {
+          alert(await getFunctionInvokeErrorMessage(res.error));
+          window.location.replace(new URL('my-reservations.html', window.location.href).href);
+          return;
+        }
+        var data = res.data;
+        if (!data || !data.ok || !data.row) {
+          alert((data && data.error) ? data.error : '예약 정보를 불러오지 못했습니다.');
+          window.location.replace(new URL('my-reservations.html', window.location.href).href);
+          return;
+        }
+        userReservationStatus = data.status || data.row.status || '대기';
+        if (isUserEditMode && userReservationStatus !== '대기') {
+          window.location.replace(bookingUrlWithMode('view', editReservationId));
+          return;
+        }
+        await loadBookingMastersAndMembership();
+        await loadVisitorEmailFromUserProfile();
+        bindBranchCompanyPickers();
+        hydrateReservationToForm(data.row);
+        showUserViewDocLinks(data.row);
+        if (isUserViewMode) {
+          applyUserViewReadOnlyUI();
+        } else {
+          applyUserEditModeUI();
+          var sec = document.getElementById('dateTimeSection');
+          if (sec) sec.classList.remove('is-locked');
+          syncDateTimeSectionLock();
+          updateSlots();
+        }
+        userReservationLoaded = true;
+        if (typeof updateReservationSummary === 'function') updateReservationSummary();
+        scrollAdminViewToTop();
+      } catch (e) {
+        console.warn(e);
+        alert('예약 정보 로드 중 오류가 발생했습니다.');
+        window.location.replace(new URL('my-reservations.html', window.location.href).href);
+      } finally {
+        hideReservationFetchLoading();
+      }
+    }
+
+    function detectAdminViewEmbed() {
+      try {
+        var p = new URLSearchParams(window.location.search);
+        return p.get('embed') === '1';
+      } catch (e) {
+        return false;
+      }
+    }
+
+    var isAdminViewEmbed = false;
+
+    function getAdminViewReservationIdFromUrl() {
+      try {
+        var p = new URLSearchParams(window.location.search);
+        var id = p.get('id');
+        return id != null && String(id).trim() !== '' ? String(id).trim() : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function normalizeAdminViewPayload(obj) {
+      if (!obj || !obj.row) return null;
+      var row = obj.row;
+      if (row.id == null) return null;
+      var urlId = getAdminViewReservationIdFromUrl();
+      if (urlId != null && String(row.id) !== urlId) return null;
+      return obj;
+    }
+
+    function readAdminViewPayloadFromStorage() {
+      try {
+        var raw = localStorage.getItem(ADMIN_VIEW_STORAGE_KEY);
+        if (!raw) raw = sessionStorage.getItem(ADMIN_VIEW_STORAGE_KEY);
+        if (!raw) return null;
+        return normalizeAdminViewPayload(JSON.parse(raw));
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function scrollAdminViewToTop() {
+      function go() {
+        window.scrollTo(0, 0);
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      }
+      go();
+      requestAnimationFrame(function () {
+        go();
+        requestAnimationFrame(go);
+      });
+      setTimeout(go, 50);
+      setTimeout(go, 200);
+    }
+
+    function bindAdminViewMessageListener() {
+      if (adminViewMessageListenerBound) return;
+      adminViewMessageListenerBound = true;
+      window.addEventListener('message', function (ev) {
+        if (!isAdminViewMode || adminViewHydrated) return;
+        if (ev.origin !== window.location.origin) return;
+        if (!ev.data || ev.data.type !== ADMIN_VIEW_STORAGE_KEY || !ev.data.payload) return;
+        var payload = normalizeAdminViewPayload(ev.data.payload);
+        if (!payload) return;
+        try {
+          localStorage.setItem(ADMIN_VIEW_STORAGE_KEY, JSON.stringify(payload));
+        } catch (e) { /* ignore */ }
+        adminViewReservationStatus = payload.status || payload.row.status || '대기';
+        hydrateReservationToForm(payload.row);
+        applyAdminViewReadOnlyUI();
+        adminViewHydrated = true;
+        scrollAdminViewToTop();
+      });
+    }
+
+    function parseMaterialInfoParts(materialInfo) {
+      var s = String(materialInfo || '').trim();
+      s = s.replace(/^\[차량대수:[12]대\]\s*/, '');
+      var kindLabel = '';
+      var mKind = s.match(/^\[자재종류:([^\]]+)\]\s*/);
+      if (mKind) {
+        kindLabel = mKind[1].trim();
+        s = s.slice(mKind[0].length);
+      }
+      var items = s.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+      return { kindLabel: kindLabel, items: items };
+    }
+
+    function resolveMaterialKindValueFromLabel(label) {
+      var l = String(label || '').trim();
+      if (!l) return '';
+      if (/혼재/.test(l) || /^3\./.test(l)) return 'scale_two_loads_one_vehicle';
+      if (/변압기|계근대 외|외 품목 1대/.test(l) || (/^2\./.test(l) && /변압기|외/.test(l))) {
+        return 'scale_plus_transformer';
+      }
+      if (/^1\./.test(l) || /계근대 품목만/.test(l)) return 'scale_only';
+      return '';
+    }
+
+    function resolveVehicleCountFromRow(row) {
+      var v = row.vehicle_count;
+      if (v === 2 || v === '2') return 2;
+      if (v === 1 || v === '1') return 1;
+      var m = String(row.material_info || '').match(/\[차량대수:([12])대\]/);
+      if (m) return parseInt(m[1], 10) === 2 ? 2 : 1;
+      return 1;
+    }
+
+    function getReservationDurationFromStoredRow(row) {
+      if (Number(row.reservation_duration_minutes) === 60) return 60;
+      var p = row.person_info;
+      if (p && typeof p === 'object' && Number(p.reservation_duration_minutes) === 60) return 60;
+      return 30;
+    }
+
+    function displayAdminViewTimeSlot(dateStr, timeStr, durationMins) {
+      var dateLabel = document.getElementById('timeSelectDate');
+      var grid = document.getElementById('timeSlots');
+      var hint = document.getElementById('timeSelectHint');
+      var timeInput = document.getElementById('time');
+
+      if (dateLabel) {
+        dateLabel.textContent = dateStr ? formatDateLabel(dateStr) : '—';
+      }
+      if (grid) {
+        grid.innerHTML = '';
+        if (timeStr) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'time-slot-btn selected';
+          btn.textContent = timeStr;
+          btn.disabled = true;
+          grid.appendChild(btn);
+        } else {
+          grid.innerHTML = '<span class="time-select-placeholder col-12">시간 정보 없음</span>';
+        }
+      }
+      if (timeInput) timeInput.value = timeStr || '';
+      if (hint) {
+        hint.textContent = timeStr
+          ? '예약 당시 선택한 시간입니다. (조회 전용 · 소요 ' + durationMins + '분)'
+          : '';
+        hint.classList.remove('text-danger');
+      }
+      updateSummerNoticeVisibility();
+    }
+
+    function hydrateReservationToForm(row) {
+      var form = document.getElementById('resForm');
+      if (!form || !row) return;
+
+      var branchName = (row.branches && row.branches.name) ? row.branches.name : '';
+      var branchId = row.branch_id;
+      selectedBranchId = branchId != null ? Number(branchId) : null;
+      selectedBranchName = branchName;
+      var bh = document.getElementById('branchIdHidden');
+      var bi = document.getElementById('branchSearchInput');
+      if (bh) bh.value = branchId != null ? String(branchId) : '';
+      if (bi) bi.value = branchName;
+
+      var companyName = (row.company_name && String(row.company_name).trim())
+        ? row.company_name
+        : ((row.companies && row.companies.name) ? row.companies.name : '');
+      selectedCompanyId = row.company_id != null ? Number(row.company_id) : null;
+      selectedCompanyName = companyName;
+      var cn = document.getElementById('companyNameHidden');
+      var ci = document.getElementById('companyIdHidden');
+      var csi = document.getElementById('companySearchInput');
+      if (cn) cn.value = companyName;
+      if (ci) ci.value = row.company_id != null ? String(row.company_id) : '';
+      if (csi) csi.value = companyName;
+
+      var pi = row.person_info;
+      var peopleText = '';
+      if (pi && typeof pi === 'object' && pi.text != null) peopleText = String(pi.text);
+      else if (typeof pi === 'string') {
+        peopleText = pi;
+        try {
+          if (pi.trim().charAt(0) === '{') {
+            var parsedPi = JSON.parse(pi);
+            if (parsedPi && parsedPi.text != null) peopleText = String(parsedPi.text);
+          }
+        } catch (e) { /* plain name */ }
+      } else if (pi) peopleText = JSON.stringify(pi);
+      var peopleEl = document.getElementById('visitorNameInput');
+      if (peopleEl) peopleEl.value = peopleText;
+      if (form.contact) form.contact.value = row.contact || '';
+      var emailEl = document.getElementById('visitorEmailInput');
+      if (emailEl) emailEl.value = row.visitor_email || '';
+
+      var vc = resolveVehicleCountFromRow(row);
+      var vcRadio = document.querySelector('input[name="vehicleCount"][value="' + vc + '"]');
+      if (vcRadio) {
+        vcRadio.checked = true;
+        vcRadio.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      syncMaterialKindOptionLabels();
+      syncMaterialKindTwoVehicleOption();
+
+      var matParts = parseMaterialInfoParts(row.material_info);
+      var kindVal = resolveMaterialKindValueFromLabel(matParts.kindLabel);
+      if (kindVal) {
+        var mkRadio = document.querySelector('input[name="materialKind"][value="' + kindVal + '"]');
+        if (mkRadio) mkRadio.checked = true;
+      }
+
+      document.querySelectorAll('.material-checkbox').forEach(function (cb) {
+        var item = cb.closest('.material-item');
+        var nm = item && item.querySelector('.item-name');
+        var nameText = nm ? nm.textContent.trim() : cb.value;
+        var checked = matParts.items.some(function (it) {
+          return it === nameText || it.indexOf(nameText) === 0 || nameText.indexOf(it) === 0;
+        });
+        cb.checked = checked;
+        toggleMaterialItemCheckedClass(cb);
+      });
+      syncMaterialSummary();
+
+      if (form.car1) form.car1.value = row.car_number_1 || '';
+      var car2El = document.getElementById('car2Input');
+      if (car2El) car2El.value = row.car_number_2 || '';
+
+      var ton1El = document.getElementById('vehicleTonnageInput');
+      if (ton1El && row.vehicle_tonnage != null && String(row.vehicle_tonnage) !== '') {
+        ton1El.value = row.vehicle_tonnage;
+      }
+      var ton2El = document.getElementById('vehicleTonnageInput2');
+      if (ton2El && row.vehicle_tonnage_2 != null && String(row.vehicle_tonnage_2) !== '') {
+        ton2El.value = row.vehicle_tonnage_2;
+      }
+
+      var dur = getReservationDurationFromStoredRow(row);
+      var durRadio = document.querySelector('input[name="durationMinutes"][value="' + dur + '"]');
+      if (durRadio) durRadio.checked = true;
+
+      var dateStr = row.reservation_date ? String(row.reservation_date).substring(0, 10) : '';
+      var timeStr = row.reservation_time ? String(row.reservation_time).trim().substring(0, 5) : '';
+      selectedDateStr = dateStr;
+      var de = document.getElementById('date');
+      if (de) de.value = dateStr;
+      if (dateStr) {
+        var dp = dateStr.split('-');
+        calViewYear = parseInt(dp[0], 10);
+        calViewMonth = parseInt(dp[1], 10) - 1;
+      }
+
+      var sec = document.getElementById('dateTimeSection');
+      if (sec) sec.classList.remove('is-locked');
+      var lockHint = document.getElementById('dateTimeSectionLockHint');
+      if (lockHint) lockHint.classList.add('d-none');
+
+      displayAdminViewTimeSlot(dateStr, timeStr, dur);
+      renderCalendar();
+      syncDateTimeSectionLock();
+      updateReservationSummary();
+    }
+
+    function applyAdminViewSafetyAckChecked() {
+      var safetyAck = document.getElementById('safetyRulesAck');
+      if (safetyAck) {
+        safetyAck.checked = true;
+        safetyAck.setAttribute('checked', 'checked');
+      }
+      var safetyHint = document.getElementById('safetyRulesAckHint');
+      if (safetyHint) safetyHint.classList.add('d-none');
+    }
+
+    function applyAdminViewReadOnlyUI() {
+      document.body.classList.add('admin-view-mode');
+      if (isAdminViewEmbed) document.body.classList.add('admin-view-embed');
+      document.title = '예약 신청 화면 조회 (관리자)';
+
+      var banner = document.getElementById('adminViewBanner');
+      if (banner) banner.classList.remove('d-none');
+
+      var statusBadge = document.getElementById('adminViewStatusBadge');
+      if (statusBadge) {
+        var st = adminViewReservationStatus || '대기';
+        statusBadge.textContent = st;
+        statusBadge.className = 'badge ms-2 ' + (
+          st === '승인' ? 'bg-primary' : (st === '반려' ? 'bg-danger' : 'bg-warning text-dark')
+        );
+      }
+
+      var infoAlert = document.querySelector('#form-section > .alert-primary');
+      if (infoAlert) infoAlert.classList.add('d-none');
+
+      var submitBtn = document.getElementById('submitBtn');
+      if (submitBtn) {
+        var submitWrap = submitBtn.closest('.col-12');
+        if (submitWrap) submitWrap.classList.add('d-none');
+      }
+
+      var safetyOpen = document.getElementById('openSafetyRulesModal');
+      if (safetyOpen) safetyOpen.classList.add('d-none');
+
+      var logoutBtn = document.getElementById('headerLogoutBtn');
+      if (logoutBtn) logoutBtn.classList.add('d-none');
+
+      document.querySelectorAll('#resForm input, #resForm textarea, #resForm select, #resForm button').forEach(function (el) {
+        if (el.type === 'hidden') return;
+        if (el.id === 'safetyRulesAck') return;
+        el.disabled = true;
+      });
+      var branchInp = document.getElementById('branchSearchInput');
+      var companyInp = document.getElementById('companySearchInput');
+      if (branchInp) branchInp.readOnly = true;
+      if (companyInp) companyInp.readOnly = true;
+
+      var calPrev = document.getElementById('calPrev');
+      var calNext = document.getElementById('calNext');
+      if (calPrev) calPrev.disabled = true;
+      if (calNext) calNext.disabled = true;
+      applyAdminViewSafetyAckChecked();
+      scrollAdminViewToTop();
+    }
+
+    function bootstrapAdminViewMode() {
+      if (!isAdminViewMode) return;
+      bindAdminViewMessageListener();
+      var payload = readAdminViewPayloadFromStorage();
+      if (!payload) {
+        setTimeout(function () {
+          if (adminViewHydrated) return;
+          payload = readAdminViewPayloadFromStorage();
+          if (payload) {
+            adminViewReservationStatus = payload.status || payload.row.status || '대기';
+            hydrateReservationToForm(payload.row);
+            applyAdminViewReadOnlyUI();
+            adminViewHydrated = true;
+            scrollAdminViewToTop();
+            return;
+          }
+          if (adminViewHydrated) return;
+          alert('예약 조회 데이터가 없습니다. 관리자 페이지에서 「신청 화면 보기」를 다시 눌러 주세요.');
+          window.location.replace(new URL('admin.html', window.location.href).href);
+        }, 800);
+        return;
+      }
+      adminViewReservationStatus = payload.status || payload.row.status || '대기';
+      hydrateReservationToForm(payload.row);
+      applyAdminViewReadOnlyUI();
+      adminViewHydrated = true;
+    }
 
     function escapeHtmlPicker(s) {
       if (!s) return '';
@@ -2007,6 +2784,7 @@
     }
 
     function isCalDayDisabled(ymd, todayStr) {
+      if (isAdminViewMode) return ymd !== selectedDateStr;
       if (ymd < todayStr) return true;
       if (ymd > reservationYmdMaxInclusiveFromTodayStr(todayStr)) return true;
       if (!isDateTimeSectionUnlocked()) return true;
@@ -2081,16 +2859,18 @@
       }
       var el = document.getElementById('calDays');
       el.innerHTML = html;
-      el.querySelectorAll('.cal-day:not(.disabled)').forEach(function(cell) {
-        cell.addEventListener('click', function() {
-          var ymd = this.dataset.ymd;
-          if (isCalDayDisabled(ymd, todayStr)) return;
-          selectedDateStr = ymd;
-          document.getElementById('date').value = ymd;
-          renderCalendar();
-          updateSlots();
+      if (!isAdminViewMode && !isUserViewMode) {
+        el.querySelectorAll('.cal-day:not(.disabled)').forEach(function(cell) {
+          cell.addEventListener('click', function() {
+            var ymd = this.dataset.ymd;
+            if (isCalDayDisabled(ymd, todayStr)) return;
+            selectedDateStr = ymd;
+            document.getElementById('date').value = ymd;
+            renderCalendar();
+            updateSlots();
+          });
         });
-      });
+      }
     }
 
     document.getElementById('calPrev').addEventListener('click', function() {
@@ -2104,20 +2884,44 @@
       renderCalendar();
     });
 
-    ensureBookingAuthOrRedirect().then(function (ok) {
-      if (!ok) return;
+    isAdminViewMode = detectAdminViewMode();
+    isUserViewMode = !isAdminViewMode && detectUserViewMode();
+    isUserEditMode = !isAdminViewMode && !isUserViewMode && detectUserEditMode();
+    if (isAdminViewMode) {
+      isAdminViewEmbed = detectAdminViewEmbed();
+      if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+      scrollAdminViewToTop();
+    }
+    if (isUserViewMode || isUserEditMode) {
+      if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+      scrollAdminViewToTop();
+    }
+
+    if (isAdminViewMode) {
       renderCalendar();
       syncDateTimeSectionLock();
-      return Promise.all([
-        loadBookingMastersAndMembership(),
-        loadVisitorEmailFromUserProfile()
-      ]).then(function () {
-        bindBranchCompanyPickers();
-        syncDateTimeSectionLock();
+      bootstrapAdminViewMode();
+    } else if (isUserViewMode || isUserEditMode) {
+      showReservationFetchLoading('예약 정보를 불러오는 중입니다...');
+      renderCalendar();
+      syncDateTimeSectionLock();
+      bootstrapUserReservationMode();
+    } else {
+      ensureBookingAuthOrRedirect().then(function (ok) {
+        if (!ok) return;
         renderCalendar();
-        if (typeof updateReservationSummary === 'function') updateReservationSummary();
+        syncDateTimeSectionLock();
+        return Promise.all([
+          loadBookingMastersAndMembership(),
+          loadVisitorEmailFromUserProfile()
+        ]).then(function () {
+          bindBranchCompanyPickers();
+          syncDateTimeSectionLock();
+          renderCalendar();
+          if (typeof updateReservationSummary === 'function') updateReservationSummary();
+        });
       });
-    });
+    }
 
     function formatDateLabel(dateStr) {
       if (!dateStr) return '';
@@ -2428,7 +3232,7 @@
         const sb = getSupabase();
         const { data, error } = await sb
           .from('reservations')
-          .select('reservation_time, car_number_1, car_number_2, reservation_duration_minutes, person_info')
+          .select('id, reservation_time, car_number_1, car_number_2, reservation_duration_minutes, person_info')
           .eq('reservation_date', date)
           .neq('status', '반려');
 
@@ -2440,7 +3244,13 @@
           return;
         }
 
-        const occupancy = buildOccupancyFromRows(data);
+        var slotRows = data || [];
+        if (isUserEditMode && editReservationId) {
+          slotRows = slotRows.filter(function (r) {
+            return String(r.id) !== String(editReservationId);
+          });
+        }
+        const occupancy = buildOccupancyFromRows(slotRows);
         const durationMins = getSelectedDurationMinutes();
 
         let available = BOOKABLE_SLOTS.filter(function (s) {
@@ -2576,8 +3386,10 @@
         syncVehicleTonnageFieldsLayout();
         syncMaterialKindTwoVehicleOption();
         var sel = document.querySelector('input[name="vehicleCount"]:checked');
-        if (sel && sel.value === '2' && car2Input) {
-          try { car2Input.focus(); } catch (e) { /* ignore */ }
+        if (sel && sel.value === '2' && car2Input && !isAdminViewMode) {
+          try { car2Input.focus({ preventScroll: true }); } catch (e) {
+            try { car2Input.focus(); } catch (e2) { /* ignore */ }
+          }
         }
         updateReservationSummary();
       }
@@ -2687,6 +3499,7 @@
 
     // [2] 폼 제출: 예약 INSERT (Supabase)
     async function handleFormSubmit() {
+      if (isAdminViewMode || isUserViewMode) return;
       const form = document.getElementById('resForm');
       syncMaterialSummary();
       var matCheck = validateMaterialSelection();
@@ -2787,7 +3600,7 @@
         const authCheck = await ensureActiveBookingSession(sb);
         if (!authCheck.ok) {
           hideBookingLoader();
-          redirectToLogin(authCheck.message || '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
+          redirectToLogin(bookingAuthRedirectMessage(authCheck, '로그인 세션이 만료되었습니다. 다시 로그인해 주세요.'));
           return;
         }
 
@@ -2812,51 +3625,76 @@
           return;
         }
 
-        setLoaderMainMessage('예약 중복 여부를 확인하는 중입니다...');
         const companyIdNum = parseInt(companyIdRaw, 10);
-        const { data: dupRows, error: dupErr } = await sb
-          .from('reservations')
-          .select('id')
-          .eq('reservation_date', date)
-          .eq('company_id', companyIdNum)
-          .neq('status', '반려')
-          .limit(1);
-        if (dupErr) {
-          hideBookingLoader();
-          alert('예약 중복 확인 오류: ' + (dupErr.message || String(dupErr)));
-          return;
+        if (!isUserEditMode) {
+          setLoaderMainMessage('예약 중복 여부를 확인하는 중입니다...');
+          const { data: dupRows, error: dupErr } = await sb
+            .from('reservations')
+            .select('id')
+            .eq('reservation_date', date)
+            .eq('company_id', companyIdNum)
+            .neq('status', '반려')
+            .limit(1);
+          if (dupErr) {
+            hideBookingLoader();
+            alert('예약 중복 확인 오류: ' + (dupErr.message || String(dupErr)));
+            return;
+          }
+          if (dupRows && dupRows.length > 0) {
+            hideBookingLoader();
+            alert('이미 해당 날짜에 동일 업체 예약 신청 내역이 존재합니다. (1일 1회 제한)');
+            return;
+          }
         }
-        if (dupRows && dupRows.length > 0) {
+
+        var submitBody = {
+          reservation_date: date,
+          reservation_time: form.time.value,
+          company_name: companyName,
+          branch_id: parseInt(branchIdRaw, 10),
+          company_id: parseInt(companyIdRaw, 10),
+          contact: contact,
+          visitor_email: visitorEmail || null,
+          car_number_1: form.car1.value.trim(),
+          car_number_2: (form.car2.value || '').trim() || null,
+          material_info: (buildBookingMetaPrefix() + form.material.value.trim()).trim(),
+          vehicle_count: getFormVehicleCount(),
+          person_info: form.people.value.trim(),
+          vehicle_tonnage: vehicleTonnage,
+          vehicle_tonnage_2: vehicleTonnage2,
+          reservation_duration_minutes: effDur,
+          duration_mode: 'manual',
+          recommended_duration_minutes: effDur,
+          recommended_reasons: [],
+          doc_url_1: null,
+          doc_url_2: null
+        };
+
+        if (isUserEditMode && editReservationId) {
+          setLoaderMainMessage('예약 정보를 수정하는 중입니다...');
+          submitBody.action = 'update';
+          submitBody.reservation_id = editReservationId;
+          const { data: updData, error: updErr } = await invokeMyReservations(submitBody);
+          if (updErr) {
+            hideBookingLoader();
+            alert('수정 오류: ' + (await getFunctionInvokeErrorMessage(updErr)));
+            return;
+          }
+          if (!updData || !updData.ok) {
+            hideBookingLoader();
+            alert((updData && updData.error) ? updData.error : '수정에 실패했습니다.');
+            return;
+          }
           hideBookingLoader();
-          alert('이미 해당 날짜에 동일 업체 예약 신청 내역이 존재합니다. (1일 1회 제한)');
+          alert('예약 내용이 수정되었습니다.');
+          window.location.replace(new URL('my-reservations.html', window.location.href).href);
           return;
         }
 
         setLoaderMainMessage('예약 정보를 등록하는 중입니다...');
 
         const { data: subData, error: subErr } = await sb.functions.invoke('submit-reservation', {
-          body: {
-            reservation_date: date,
-            reservation_time: form.time.value,
-            company_name: companyName,
-            branch_id: parseInt(branchIdRaw, 10),
-            company_id: parseInt(companyIdRaw, 10),
-            contact: contact,
-            visitor_email: visitorEmail || null,
-            car_number_1: form.car1.value.trim(),
-            car_number_2: (form.car2.value || '').trim() || null,
-            material_info: (buildBookingMetaPrefix() + form.material.value.trim()).trim(),
-            vehicle_count: getFormVehicleCount(),
-            person_info: form.people.value.trim(),
-            vehicle_tonnage: vehicleTonnage,
-            vehicle_tonnage_2: vehicleTonnage2,
-            reservation_duration_minutes: effDur,
-            duration_mode: 'manual',
-            recommended_duration_minutes: effDur,
-            recommended_reasons: [],
-            doc_url_1: null,
-            doc_url_2: null
-          }
+          body: submitBody
         });
 
         if (subErr) {
@@ -2948,6 +3786,122 @@
         } catch (e) { /* ignore */ }
       }
     })();
+
+    (function initIndexHeaderAuth() {
+      var sbClient = null;
+      function getSb() {
+        if (!sbClient) {
+          if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined') return null;
+          sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+        return sbClient;
+      }
+
+      var guestEl = document.getElementById('headerNavGuest');
+      var userEl = document.getElementById('headerNavUser');
+      var companyEl = document.getElementById('headerCompanyDisplay');
+      var logoutBtn = document.getElementById('headerLogoutBtn');
+      if (!guestEl || !userEl || !companyEl) return;
+
+      function setGuestVisible(yes) {
+        guestEl.hidden = !yes;
+        userEl.hidden = yes;
+      }
+
+      function formatNameList(names) {
+        var uniq = [];
+        (names || []).forEach(function (n) {
+          var s = n != null ? String(n).trim() : '';
+          if (s && uniq.indexOf(s) === -1) uniq.push(s);
+        });
+        if (uniq.length === 0) return { short: '', full: '' };
+        var first = uniq[0];
+        if (uniq.length === 1) return { short: first, full: first };
+        return { short: first, full: '' };
+      }
+
+      function formatCompanyNames(rows) {
+        var raw = [];
+        (rows || []).forEach(function (row) {
+          var c = row && row.companies;
+          var n = c && c.name ? String(c.name).trim() : '';
+          if (n) raw.push(n);
+        });
+        return formatNameList(raw);
+      }
+
+      function displayNameFromSession(session) {
+        var meta = (session.user && session.user.user_metadata) || {};
+        var fn = (meta.full_name && String(meta.full_name).trim()) || '';
+        if (fn) return { short: fn, full: '' };
+        var email = (session.user && session.user.email) || '';
+        var at = email.indexOf('@');
+        var local = at > 0 ? email.slice(0, at) : email;
+        return { short: (local && String(local).trim()) || '회원', full: '' };
+      }
+
+      async function applySession(session) {
+        var sb = getSb();
+        if (!session || !sb) {
+          setGuestVisible(true);
+          companyEl.textContent = '';
+          companyEl.removeAttribute('title');
+          return;
+        }
+        setGuestVisible(false);
+        companyEl.textContent = '불러오는 중…';
+        try {
+          var fmt = { short: '', full: '' };
+          var rRpc = await sb.rpc('get_my_company_names_for_header');
+          if (!rRpc.error && Array.isArray(rRpc.data) && rRpc.data.length) {
+            fmt = formatNameList(rRpc.data);
+          }
+          if (!fmt.short) {
+            var r = await sb.from('user_company_memberships').select('companies(name)');
+            if (r.error) throw r.error;
+            fmt = formatCompanyNames(r.data || []);
+          }
+          if (!fmt.short) fmt = displayNameFromSession(session);
+          companyEl.textContent = fmt.short;
+          if (fmt.full) companyEl.setAttribute('title', fmt.full);
+          else companyEl.removeAttribute('title');
+        } catch (e) {
+          console.warn(e);
+          var fb = displayNameFromSession(session);
+          companyEl.textContent = fb.short;
+          if (fb.full) companyEl.setAttribute('title', fb.full);
+          else companyEl.removeAttribute('title');
+        }
+      }
+
+      var sb = getSb();
+      if (!sb) {
+        setGuestVisible(true);
+        return;
+      }
+
+      sb.auth.getSession().then(function (res) {
+        applySession(res.data && res.data.session ? res.data.session : null);
+      });
+
+      sb.auth.onAuthStateChange(function (_evt, session) {
+        applySession(session);
+      });
+
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+          logoutBtn.disabled = true;
+          sb.auth.signOut().then(function () {
+            window.location.replace(new URL('index.html', window.location.href).href);
+          }).catch(function (e) {
+            console.warn(e);
+            alert('로그아웃 처리 중 오류가 발생했습니다.');
+            logoutBtn.disabled = false;
+          });
+        });
+      }
+    })();
+
     })();
   </script>
 </body>

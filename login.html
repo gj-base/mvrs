@@ -240,8 +240,14 @@
             btn.disabled = false;
             return;
           }
-          var home = new URL('index.html', window.location.href).href;
-          window.location.replace(home);
+          var nextParam = '';
+          try {
+            nextParam = new URLSearchParams(window.location.search).get('next') || '';
+          } catch (e) { /* ignore */ }
+          var dest = nextParam
+            ? new URL(nextParam, window.location.href).href
+            : new URL('index.html', window.location.href).href;
+          window.location.replace(dest);
         } catch (err) {
           console.warn(err);
           alert('로그인 처리 중 오류가 발생했습니다.');

@@ -16,6 +16,10 @@ verify_jwt = false
 [functions.submit-reservation]
 verify_jwt = false
 
+# 업체 내 예약 목록·조회·수정·삭제 (JWT는 함수 내부에서 검증)
+[functions.my-reservations]
+verify_jwt = false
+
 # 예약 업로드 전 IP·로그인 확인 (submit-reservation 과 동일 IP 규칙)
 [functions.check-booking-submit-allowed]
 verify_jwt = false

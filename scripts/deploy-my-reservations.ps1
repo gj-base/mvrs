@@ -1,4 +1,4 @@
-# Edge Functions: submit-reservation, check-booking-submit-allowed, my-reservations 배포
+# Edge Function my-reservations 배포
 # 1) Supabase > Account > Access Tokens 에서 Personal Access Token 생성
 # 2) PowerShell:  $env:SUPABASE_ACCESS_TOKEN="sbp_...."
 # 3) 이 스크립트 실행
@@ -36,17 +36,9 @@ if (-not $env:SUPABASE_ACCESS_TOKEN) {
   Write-Host ""
   Write-Host "[필요] 환경 변수 SUPABASE_ACCESS_TOKEN 이 없습니다."
   Write-Host '  $env:SUPABASE_ACCESS_TOKEN="sbp_여기에붙여넣기"'
-  Write-Host "  .\scripts\deploy-booking-edge-functions.ps1"
+  Write-Host "  .\scripts\deploy-my-reservations.ps1"
   exit 1
 }
-
-& $supabaseExe functions deploy submit-reservation --no-verify-jwt --project-ref $projectRef
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-Write-Host "배포 완료: submit-reservation"
-
-& $supabaseExe functions deploy check-booking-submit-allowed --no-verify-jwt --project-ref $projectRef
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-Write-Host "배포 완료: check-booking-submit-allowed"
 
 & $supabaseExe functions deploy my-reservations --no-verify-jwt --project-ref $projectRef
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

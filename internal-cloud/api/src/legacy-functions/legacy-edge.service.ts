@@ -8,6 +8,7 @@ import { checkAdminSourceIp } from './admin-ip.util';
 import { checkBookingSubmitBlockedBySourceIp } from './booking-ip.util';
 import { decryptPiiField } from './pii.util';
 import { SubmitReservationService } from './submit-reservation.service';
+import { MyReservationsService } from './my-reservations.service';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class LegacyEdgeService {
     private readonly config: ConfigService,
     private readonly auth: AuthService,
     private readonly submitReservation: SubmitReservationService,
+    private readonly myReservations: MyReservationsService,
   ) {}
 
   async dispatch(name: string, req: Request, res: Response, rawBody: unknown) {
@@ -27,6 +29,8 @@ export class LegacyEdgeService {
         return this.checkBookingSubmitAllowed(req, res);
       case 'submit-reservation':
         return this.submitReservationHandler(req, res, rawBody);
+      case 'my-reservations':
+        return this.myReservationsHandler(req, res, rawBody);
       case 'admin-manage-public-settings':
         return this.adminManagePublicSettings(req, res, rawBody);
       case 'admin-list-user-signups':
@@ -87,6 +91,11 @@ export class LegacyEdgeService {
 
   private async submitReservationHandler(req: Request, res: Response, rawBody: unknown) {
     const out = await this.submitReservation.handle(req, this.pg.pool, (rawBody || {}) as never);
+    return res.status(out.status).json(out.body);
+  }
+
+  private async myReservationsHandler(req: Request, res: Response, rawBody: unknown) {
+    const out = await this.myReservations.handle(req, this.pg.pool, (rawBody || {}) as Record<string, unknown>);
     return res.status(out.status).json(out.body);
   }
 
