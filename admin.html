@@ -446,7 +446,7 @@
       <section id="admin-panel-calendar" class="admin-panel is-active" aria-labelledby="admin-panel-calendar-title">
         <div class="admin-panel-head">
           <h2 id="admin-panel-calendar-title">일정 관리</h2>
-          <p>예약 현황 캘린더에서 승인·반려를 처리할 수 있습니다.</p>
+          <p>예약은 신청 즉시 확정됩니다. 캘린더에서 반려 처리를 할 수 있습니다.</p>
         </div>
         <div class="admin-header-area flex-wrap gap-3">
           <!-- <h4 class="fw-bold m-0 d-none d-md-block" style="color:var(--kepco-blue)">차량 예약 캘린더</h4> -->
@@ -461,8 +461,7 @@
               </div>
             </div>
             <div class="d-flex flex-wrap align-items-center gap-2">
-              <span class="badge rounded-pill px-3 py-2" style="background-color: #004795">🔵 승인완료</span>
-              <span class="badge rounded-pill px-3 py-2 text-dark" style="background-color: #f39c12">🟡 승인대기</span>
+              <span class="badge rounded-pill px-3 py-2" style="background-color: #004795">🔵 승인(확정)</span>
               <span class="badge rounded-pill px-3 py-2" style="background-color: #e74c3c">🔴 반려</span>
             </div>
           </div>
@@ -683,6 +682,10 @@
               <div class="detail-value" id="viewTime">-</div>
             </div>
             <div class="col-6">
+              <div class="detail-label">신청 시간</div>
+              <div class="detail-value" id="viewCreatedAt">-</div>
+            </div>
+            <div class="col-6">
               <div class="detail-label">예약 소요</div>
               <div class="detail-value" id="viewDuration">-</div>
             </div>
@@ -694,7 +697,7 @@
               <div class="detail-label">차량 중량</div>
               <div class="detail-value" id="viewVehicleTonnage">-</div>
             </div>
-            <div class="col-12">
+            <div class="col-6">
               <div class="detail-label">차량 정보</div>
               <div class="detail-value text-break" id="viewCars">-</div>
             </div>
@@ -727,7 +730,7 @@
         <div class="modal-footer border-0">
           <button type="button" id="btnViewBookingForm" class="btn btn-outline-primary w-100 fw-bold py-2 mb-2">신청 화면 보기 (새 탭)</button>
           <div class="d-flex flex-column flex-md-row w-100 gap-2">
-            <button type="button" id="btnApprove" class="btn btn-primary w-100 fw-bold py-2">승인</button>
+            <button type="button" id="btnApprove" class="btn btn-primary w-100 fw-bold py-2 d-none" hidden aria-hidden="true">승인</button>
             <button type="button" id="btnReject" class="btn btn-outline-danger w-100 fw-bold py-2">반려</button>
           </div>
           <button type="button" id="btnModalFooterClose" class="btn btn-secondary w-100 fw-bold py-2 mt-2" data-bs-dismiss="modal">닫기</button>
@@ -766,7 +769,7 @@
       if (!row) return null;
       return {
         row: row,
-        status: (currentEvent.extendedProps && currentEvent.extendedProps.status) || row.status || '대기',
+        status: (currentEvent.extendedProps && currentEvent.extendedProps.status) || row.status || '승인',
         savedAt: Date.now()
       };
     }
@@ -885,6 +888,39 @@
       return num;
     }
 
+    var KOREAN_WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+    function formatKoreanDateTimeLabel(y, m, d, timeStr) {
+      var dt = new Date(y, m - 1, d);
+      var wd = KOREAN_WEEKDAYS[dt.getDay()];
+      return y + '년 ' + m + '월 ' + d + '일 (' + wd + ') ' + timeStr;
+    }
+
+    /** ISO/DB timestamptz → 예: 2026년 6월 17일 (수) 10:02 (로컬 시각) */
+    function formatKoreanDateTimeFromInstant(iso) {
+      if (iso == null || String(iso).trim() === '') return '—';
+      try {
+        var raw = String(iso).trim();
+        if (raw.indexOf('T') < 0 && raw.indexOf(' ') > 0) {
+          raw = raw.replace(' ', 'T');
+        }
+        var d = new Date(raw);
+        if (Number.isNaN(d.getTime())) return '—';
+        var h = d.getHours();
+        var min = d.getMinutes();
+        var timeStr =
+          (h < 10 ? '0' : '') + h + ':' + (min < 10 ? '0' : '') + min;
+        return formatKoreanDateTimeLabel(
+          d.getFullYear(),
+          d.getMonth() + 1,
+          d.getDate(),
+          timeStr,
+        );
+      } catch (e) {
+        return '—';
+      }
+    }
+
     /** FullCalendar event.startStr(ISO) → 예: 2026년 4월 6일 (월) 09:00 */
     function formatVisitDateTime(startStr) {
       if (!startStr) return '-';
@@ -899,10 +935,7 @@
       var m = parseInt(segs[1], 10);
       var d = parseInt(segs[2], 10);
       if (!y || !m || !d) return datePart + ' ' + timeStr;
-      var dt = new Date(y, m - 1, d);
-      var weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-      var wd = weekdays[dt.getDay()];
-      return y + '년 ' + m + '월 ' + d + '일 (' + wd + ') ' + timeStr;
+      return formatKoreanDateTimeLabel(y, m, d, timeStr);
     }
 
     function setStatusActionLoading(on, message) {
@@ -1557,12 +1590,28 @@
     function formatSignupDateTime(iso) {
       if (iso == null || String(iso).trim() === '') return '—';
       try {
-        var d = new Date(String(iso));
+        var raw = String(iso).trim();
+        if (raw.indexOf('T') < 0 && raw.indexOf(' ') > 0) {
+          raw = raw.replace(' ', 'T');
+        }
+        var d = new Date(raw);
         if (Number.isNaN(d.getTime())) return String(iso).substring(0, 16);
         return d.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' });
       } catch (e) {
         return '—';
       }
+    }
+
+    function resolveReservationCreatedAt(eventId, extendedProps) {
+      var idKey = String(eventId);
+      var row = adminReservationRowsById[idKey];
+      if (row && row.created_at != null && String(row.created_at).trim() !== '') {
+        return row.created_at;
+      }
+      var p = extendedProps || {};
+      if (p.created_at != null && String(p.created_at).trim() !== '') return p.created_at;
+      if (p.createdAt != null && String(p.createdAt).trim() !== '') return p.createdAt;
+      return null;
     }
 
     function formatBrnForDisplay(raw) {
@@ -1957,7 +2006,7 @@
           const sb = getSupabase();
           let q = sb
             .from('reservations')
-            .select('id, reservation_date, reservation_time, company_name, branch_id, company_id, car_number_1, car_number_2, material_info, vehicle_count, contact, visitor_email, person_info, vehicle_tonnage, vehicle_tonnage_2, reservation_duration_minutes, duration_mode, status, status_notification_sent, branches(name), companies(name)');
+            .select('id, created_at, reservation_date, reservation_time, company_name, branch_id, company_id, car_number_1, car_number_2, material_info, vehicle_count, contact, visitor_email, person_info, vehicle_tonnage, vehicle_tonnage_2, reservation_duration_minutes, duration_mode, status, status_notification_sent, branches(name), companies(name)');
           if (!showRejectedReservations) {
             q = q.neq('status', '반려');
           }
@@ -2057,7 +2106,7 @@
               id: row.id,
               title: companyNm || row.company_name || '예약',
               start: startISO,
-              color: row.status === '승인' ? '#004795' : (row.status === '반려' ? '#e74c3c' : '#f39c12'),
+              color: row.status === '반려' ? '#e74c3c' : '#004795',
               extendedProps: {
                 company: companyNm || row.company_name || '-',
                 branchName: branchNm || '-',
@@ -2070,8 +2119,9 @@
                 people: peopleText || '-',
                 duration: durationText,
                 vehicleTonnageLine: vehicleTonnageLine,
-                status: row.status || '대기',
-                statusNotificationSent: row.status_notification_sent === true
+                status: row.status || '승인',
+                statusNotificationSent: row.status_notification_sent === true,
+                created_at: row.created_at || null
               }
             };
           });
@@ -2136,11 +2186,16 @@
             return;
           }
           currentEvent = info.event;
-          const status = p.status || '대기';
+          const statusRaw = p.status || '승인';
+          const status = statusRaw === '대기' ? '승인' : statusRaw;
           document.getElementById('modalTitle').innerText = `[${p.company}] 예약 정보`;
           document.getElementById('viewBranchName').innerText = p.branchName || '-';
           document.getElementById('viewCompanyName').innerText = p.companyName || p.company || '-';
           document.getElementById('viewTime').innerText = formatVisitDateTime(info.event.startStr);
+          var createdAtEl = document.getElementById('viewCreatedAt');
+          if (createdAtEl) {
+            createdAtEl.innerText = formatKoreanDateTimeFromInstant(resolveReservationCreatedAt(info.event.id, p));
+          }
           document.getElementById('viewDuration').innerText = p.duration || '30분';
           var vTon = document.getElementById('viewVehicleTonnage');
           if (vTon) vTon.innerText = p.vehicleTonnageLine != null && String(p.vehicleTonnageLine).trim() !== '' ? p.vehicleTonnageLine : '-';
@@ -2154,7 +2209,7 @@
           document.getElementById('viewPeople').innerText = p.people || '-';
           const statusBadge = document.getElementById('viewStatus');
           statusBadge.innerText = status;
-          statusBadge.className = 'badge ' + (status === '승인' ? 'bg-primary' : (status === '반려' ? 'bg-danger' : 'bg-warning text-dark'));
+          statusBadge.className = 'badge ' + (status === '반려' ? 'bg-danger' : 'bg-primary');
           var mailSentEl = document.getElementById('viewMailSent');
           if (mailSentEl) {
             if (status === '승인' || status === '반려') {
@@ -2245,14 +2300,14 @@
             resModal.hide();
           }
         } else {
-          const newColor = newStatus === '승인' ? '#004795' : (newStatus === '반려' ? '#e74c3c' : '#f39c12');
+          const newColor = newStatus === '반려' ? '#e74c3c' : '#004795';
           currentEvent.setExtendedProp('status', newStatus);
           currentEvent.setProp('color', newColor);
         }
 
         const statusBadge = document.getElementById('viewStatus');
         statusBadge.innerText = newStatus;
-        statusBadge.className = 'badge ' + (newStatus === '승인' ? 'bg-primary' : (newStatus === '반려' ? 'bg-danger' : 'bg-warning text-dark'));
+        statusBadge.className = 'badge ' + (newStatus === '반려' ? 'bg-danger' : 'bg-primary');
 
         const approveBtn = document.getElementById('btnApprove');
         const rejectBtn = document.getElementById('btnReject');

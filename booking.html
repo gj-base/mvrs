@@ -1350,9 +1350,9 @@
     <div id="success-section" class="text-center" style="display: none;">
       <div class="card p-5">
         <div class="success-icon">✅</div>
-        <h2 class="fw-bold text-primary mb-3">예약 신청이 접수되었습니다!</h2>
+        <h2 class="fw-bold text-primary mb-3">예약이 확정되었습니다!</h2>
         <p class="text-muted mb-4 fs-5">
-          입력하신 이메일로 담당자의 검토 결과(승인/반려)가 안내될 예정입니다.<br>
+          입력하신 이메일로 예약 확정 안내가 발송됩니다.<br>
           안전한 작업을 위해 배정된 예약 시간을 반드시 지켜 주시기 바랍니다.
         </p>
         <button type="button" onclick="location.reload()" class="btn btn-primary px-5">
@@ -1397,6 +1397,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
+  <script src="booking-deadline.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     (function () {
@@ -1626,14 +1627,15 @@
       var titleEl = document.getElementById('userViewBannerTitle');
       if (titleEl) titleEl.textContent = '예약 상세';
       var hintEl = document.getElementById('userViewBannerHint');
-      if (hintEl) hintEl.textContent = '승인·반려된 예약은 조회만 가능합니다.';
+      if (hintEl) hintEl.textContent = '마감 시간이 지난 예약이거나 반려 건은 조회만 가능합니다.';
 
       var statusBadge = document.getElementById('userViewStatusBadge');
       if (statusBadge) {
-        var st = userReservationStatus || '대기';
+        var st = userReservationStatus || '승인';
+        if (st === '대기') st = '승인';
         statusBadge.textContent = st;
         statusBadge.className = 'badge ms-2 ' + (
-          st === '승인' ? 'bg-primary' : (st === '반려' ? 'bg-danger' : 'bg-warning text-dark')
+          st === '승인' ? 'bg-primary' : (st === '반려' ? 'bg-danger' : 'bg-secondary')
         );
       }
 
@@ -1676,12 +1678,14 @@
       var titleEl = document.getElementById('userViewBannerTitle');
       if (titleEl) titleEl.textContent = '예약 수정';
       var hintEl = document.getElementById('userViewBannerHint');
-      if (hintEl) hintEl.textContent = '승인 대기 상태의 예약만 수정할 수 있습니다.';
+      if (hintEl) hintEl.textContent = '방문일 전날 16:00까지 수정할 수 있습니다.';
 
       var statusBadge = document.getElementById('userViewStatusBadge');
       if (statusBadge) {
-        statusBadge.textContent = userReservationStatus || '대기';
-        statusBadge.className = 'badge ms-2 bg-warning text-dark';
+        var editSt = userReservationStatus || '승인';
+        if (editSt === '대기') editSt = '승인';
+        statusBadge.textContent = editSt;
+        statusBadge.className = 'badge ms-2 bg-primary';
       }
 
       var submitBtn = document.getElementById('submitBtn');
@@ -1740,10 +1744,14 @@
           return;
         }
 
-        userReservationStatus = data.status || data.row.status || '대기';
-        if (isUserEditMode && userReservationStatus !== '대기') {
-          window.location.replace(bookingUrlWithMode('view', editReservationId));
-          return;
+        userReservationStatus = data.status || data.row.status || '승인';
+        var canEdit = data.can_edit === true;
+        if (isUserEditMode) {
+          var dl = window.MVRS_BOOKING_DEADLINE;
+          if (!dl || !dl.isApprovedStatus(userReservationStatus) || !canEdit) {
+            window.location.replace(bookingUrlWithMode('view', editReservationId));
+            return;
+          }
         }
 
         await loadBookingMastersAndMembership();
@@ -2853,6 +2861,7 @@
       if (isAdminViewMode) return ymd !== selectedDateStr;
       if (ymd < todayStr) return true;
       if (ymd > reservationYmdMaxInclusiveFromTodayStr(todayStr)) return true;
+      if (window.MVRS_BOOKING_DEADLINE && !MVRS_BOOKING_DEADLINE.isUserActionAllowed(ymd, 'submit_or_update')) return true;
       if (!isDateTimeSectionUnlocked()) return true;
       if (!isYmdAllowedForBranch(ymd, selectedBranchId)) return true;
       if (isYmdBlockedForBranch(ymd, selectedBranchId)) return true;
@@ -3680,6 +3689,10 @@
       var bookMaxYmd = reservationYmdMaxInclusiveFromTodayStr(todayStrForLimit);
       if (reservationDate < todayStrForLimit || reservationDate > bookMaxYmd) {
         alert('예약은 오늘부터 7일 후까지(오늘 포함)만 가능합니다. 달력에서 선택 가능한 날짜를 다시 확인해 주세요.');
+        return;
+      }
+      if (window.MVRS_BOOKING_DEADLINE && !MVRS_BOOKING_DEADLINE.isUserActionAllowed(reservationDate, 'submit_or_update')) {
+        alert(MVRS_BOOKING_DEADLINE.deadlineErrorMessage('submit_or_update'));
         return;
       }
 

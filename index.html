@@ -1095,7 +1095,7 @@
               <div class="landing-support-card">
                 <p class="landing-support-card-label">연락처</p>
                 <p class="landing-support-card-phone">062-260-5134</p>
-                <p class="landing-support-card-note">예약 승인·변경·취소는 담당자에게 문의해 주세요.</p>
+                <p class="landing-support-card-note">예약은 신청 즉시 확정됩니다. 변경·취소는 마감 시간(전날 16:00/14:00) 내에 내 예약에서 처리해 주세요.</p>
               </div>
             </div>
           </aside>
@@ -1164,6 +1164,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
+  <script src="booking-deadline.js"></script>
   <script>
     (function setupLandingSafetyRulesModal() {
       var root = document.getElementById('landingSafetyRulesModal');
@@ -1646,6 +1647,8 @@
                 /* 전 지사 환입 불가일 */
               } else if (bmap && bmap[ymdTry]) {
                 /* 지사별 환입 불가일(구) */
+              } else if (window.MVRS_BOOKING_DEADLINE && !MVRS_BOOKING_DEADLINE.isUserActionAllowed(ymdTry, 'submit_or_update')) {
+                /* 신청·수정 마감 */
               } else {
                 return ymdTry;
               }

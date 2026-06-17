@@ -208,7 +208,7 @@
 
   <div class="page-wrap">
     <h2 class="page-title">내 예약</h2>
-    <p class="page-desc">소속 업체로 접수한 예약 목록입니다. <strong>승인 대기</strong> 건은 수정·신청 취소가 가능하고, 승인·반려 건은 상세 조회만 할 수 있습니다.</p>
+    <p class="page-desc">예약 신청 시 즉시 확정(승인)됩니다. <strong>방문일 전날 16:00까지</strong> 수정, <strong>14:00까지</strong> 신청 취소가 가능합니다. 반려 건은 상세 조회만 할 수 있습니다.</p>
 
     <div class="list-card">
       <div id="listLoading" class="loading-state">
@@ -245,6 +245,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
+  <script src="booking-deadline.js"></script>
   <script>
     (function () {
       var sbClient = null;
@@ -274,9 +275,28 @@
       }
 
       function statusBadgeClass(st) {
-        if (st === '승인') return 'bg-primary';
+        if (st === '승인' || st === '대기') return 'bg-primary';
         if (st === '반려') return 'bg-danger';
-        return 'bg-warning text-dark';
+        return 'bg-secondary';
+      }
+
+      function normalizeDisplayStatus(st) {
+        var s = String(st || '승인').trim();
+        return s === '대기' ? '승인' : s;
+      }
+
+      function rowCanEdit(item, visitYmd) {
+        if (item.can_edit != null) return item.can_edit === true;
+        var dl = window.MVRS_BOOKING_DEADLINE;
+        if (!dl) return false;
+        return dl.isApprovedStatus(item.status) && dl.isUserActionAllowed(visitYmd, 'submit_or_update');
+      }
+
+      function rowCanCancel(item, visitYmd) {
+        if (item.can_cancel != null) return item.can_cancel === true;
+        var dl = window.MVRS_BOOKING_DEADLINE;
+        if (!dl) return false;
+        return dl.isApprovedStatus(item.status) && dl.isUserActionAllowed(visitYmd, 'cancel');
       }
 
       function escapeHtml(s) {
@@ -314,20 +334,24 @@
       }
 
       function renderRow(item) {
-        var st = item.status || '대기';
+        var st = normalizeDisplayStatus(item.status);
         var dateStr = item.reservation_date ? String(item.reservation_date).substring(0, 10) : '—';
+        var visitYmd = dateStr !== '—' ? dateStr : '';
         var timeStr = item.reservation_time ? String(item.reservation_time).substring(0, 5) : '—';
         var branch = item.branch_name || '—';
         var company = item.company_label || item.company_name || '—';
         var car = item.car_number_1 || '—';
+        var canEdit = visitYmd && rowCanEdit(item, visitYmd);
+        var canCancel = visitYmd && rowCanCancel(item, visitYmd);
         var actions = '';
-        if (st === '대기') {
-          actions =
-            '<a class="btn btn-outline-primary btn-action me-1" href="' + escapeHtml(bookingUrl('edit', item.id)) + '">수정</a>' +
-            '<button type="button" class="btn btn-outline-danger btn-action btn-cancel" data-id="' + escapeHtml(String(item.id)) + '">신청 취소</button>';
-        } else {
-          actions =
-            '<a class="btn btn-outline-secondary btn-action" href="' + escapeHtml(bookingUrl('view', item.id)) + '">상세</a>';
+        if (canEdit) {
+          actions += '<a class="btn btn-outline-primary btn-action me-1" href="' + escapeHtml(bookingUrl('edit', item.id)) + '">수정</a>';
+        }
+        if (canCancel) {
+          actions += '<button type="button" class="btn btn-outline-danger btn-action btn-cancel' + (canEdit ? '' : '') + '" data-id="' + escapeHtml(String(item.id)) + '">신청 취소</button>';
+        }
+        if (!actions) {
+          actions = '<a class="btn btn-outline-secondary btn-action" href="' + escapeHtml(bookingUrl('view', item.id)) + '">상세</a>';
         }
         var tr = document.createElement('tr');
         tr.innerHTML =
