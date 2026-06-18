@@ -761,6 +761,65 @@
     /** 캘린더 로드 시 예약 원본 row (신청 화면 조회용) */
     var adminReservationRowsById = {};
 
+    function isPiiEncryptedValue(v) {
+      return v != null && String(v).trim().indexOf('enc:v1:') === 0;
+    }
+
+    function rowNeedsPiiDecrypt(row) {
+      if (!row) return false;
+      return isPiiEncryptedValue(row.contact) || isPiiEncryptedValue(row.visitor_email);
+    }
+
+    async function decryptReservationPiiForRow(row) {
+      if (!row) return row;
+      if (!rowNeedsPiiDecrypt(row)) return row;
+      if (!adminNotifySecretSession) {
+        throw new Error('관리자 세션이 없습니다. 다시 로그인해 주세요.');
+      }
+      var sb = getSupabase();
+      var inv = await sb.functions.invoke('decrypt-reservation-pii', {
+        body: {
+          admin_secret: adminNotifySecretSession,
+          items: [{ contact: row.contact, visitor_email: row.visitor_email }],
+        },
+      });
+      if (inv.error) {
+        throw new Error(await formatEdgeInvokeError(inv.error));
+      }
+      if (!inv.data || !inv.data.ok) {
+        throw new Error((inv.data && inv.data.error) ? inv.data.error : '복호화 실패');
+      }
+      var pair = (inv.data.items || [])[0] || {};
+      return Object.assign({}, row, {
+        contact: pair.contact != null ? pair.contact : row.contact,
+        visitor_email: pair.visitor_email != null ? pair.visitor_email : row.visitor_email,
+      });
+    }
+
+    async function ensureReservationPiiDecrypted(eventId, calendarEvent) {
+      var idKey = String(eventId);
+      var row = adminReservationRowsById[idKey];
+      if (!row) return null;
+      var p = calendarEvent && calendarEvent.extendedProps;
+      if (p && p.piiDecrypted) return row;
+      if (!rowNeedsPiiDecrypt(row)) {
+        if (calendarEvent) {
+          calendarEvent.setExtendedProp('contact', row.contact);
+          calendarEvent.setExtendedProp('visitorEmail', row.visitor_email || '-');
+          calendarEvent.setExtendedProp('piiDecrypted', true);
+        }
+        return row;
+      }
+      var decrypted = await decryptReservationPiiForRow(row);
+      adminReservationRowsById[idKey] = decrypted;
+      if (calendarEvent) {
+        calendarEvent.setExtendedProp('contact', decrypted.contact);
+        calendarEvent.setExtendedProp('visitorEmail', decrypted.visitor_email || '-');
+        calendarEvent.setExtendedProp('piiDecrypted', true);
+      }
+      return decrypted;
+    }
+
     var ADMIN_VIEW_STORAGE_KEY = 'mvrs_admin_view_reservation';
 
     function buildAdminViewPayloadFromCurrentEvent() {
@@ -805,7 +864,14 @@
       setTimeout(postOnce, 600);
     }
 
-    function openAdminBookingView() {
+    async function openAdminBookingView() {
+      if (!currentEvent) return;
+      try {
+        await ensureReservationPiiDecrypted(currentEvent.id, currentEvent);
+      } catch (e) {
+        alert('예약 데이터를 불러오지 못했습니다: ' + (e.message || e));
+        return;
+      }
       var payload = buildAdminViewPayloadFromCurrentEvent();
       if (!payload) {
         alert('예약 원본 데이터를 찾을 수 없습니다. 캘린더를 새로고침한 뒤 다시 시도해 주세요.');
@@ -2033,37 +2099,7 @@
           if (blkGlobalResult.error) {
             console.warn(blkGlobalResult.error);
           }
-          if (!adminNotifySecretSession) {
-            alert('관리자 세션이 없습니다. 다시 로그인해 주세요.');
-            failureCallback(new Error('관리자 세션 없음'));
-            return;
-          }
-          const { data: decData, error: decErr } = await sb.functions.invoke('decrypt-reservation-pii', {
-            body: {
-              admin_secret: adminNotifySecretSession,
-              items: (data || []).map(function (row) {
-                return { contact: row.contact, visitor_email: row.visitor_email };
-              }),
-            },
-          });
-          if (decErr) {
-            alert('예약 개인정보 복호화 실패: ' + (await formatEdgeInvokeError(decErr)));
-            failureCallback(decErr);
-            return;
-          }
-          if (!decData || !decData.ok) {
-            alert('예약 개인정보 복호화 실패: ' + (decData && decData.error ? decData.error : '알 수 없는 오류'));
-            failureCallback(new Error('decrypt-reservation-pii failed'));
-            return;
-          }
-          const decItems = decData.items || [];
-          const rows = (data || []).map(function (row, idx) {
-            var pair = decItems[idx] || {};
-            return Object.assign({}, row, {
-              contact: pair.contact != null ? pair.contact : row.contact,
-              visitor_email: pair.visitor_email != null ? pair.visitor_email : row.visitor_email,
-            });
-          });
+          var rows = data || [];
           adminReservationRowsById = {};
           rows.forEach(function (row) {
             if (row && row.id != null) adminReservationRowsById[String(row.id)] = row;
@@ -2114,8 +2150,9 @@
                 cars: [row.car_number_1, row.car_number_2].filter(Boolean).join(' / '),
                 vehicleCountText: vehicleCountText,
                 material: stripLegacyVehicleCountFromMaterialInfo(row.material_info),
-                contact: row.contact,
-                visitorEmail: row.visitor_email || '-',
+                contact: rowNeedsPiiDecrypt(row) ? null : row.contact,
+                visitorEmail: rowNeedsPiiDecrypt(row) ? '-' : (row.visitor_email || '-'),
+                piiDecrypted: !rowNeedsPiiDecrypt(row),
                 people: peopleText || '-',
                 duration: durationText,
                 vehicleTonnageLine: vehicleTonnageLine,
@@ -2172,7 +2209,7 @@
           });
           successCallback(events);
         },
-        eventClick: function(info) {
+        eventClick: async function(info) {
           const p = info.event.extendedProps || {};
           if (p.isBlockedDate) {
             var ds = info.event.startStr != null ? String(info.event.startStr).substring(0, 10) : '';
@@ -2203,9 +2240,14 @@
           if (vcEl) vcEl.innerText = p.vehicleCountText || '-';
           document.getElementById('viewCars').innerText = p.cars || '-';
           document.getElementById('viewMaterial').innerText = p.material || '-';
-          document.getElementById('viewContact').innerText = formatPhoneNumber(p.contact);
           var veEl = document.getElementById('viewVisitorEmail');
-          if (veEl) veEl.innerText = (p.visitorEmail && p.visitorEmail !== '-') ? p.visitorEmail : '-';
+          if (p.piiDecrypted) {
+            document.getElementById('viewContact').innerText = formatPhoneNumber(p.contact);
+            if (veEl) veEl.innerText = (p.visitorEmail && p.visitorEmail !== '-') ? p.visitorEmail : '-';
+          } else {
+            document.getElementById('viewContact').innerText = '불러오는 중…';
+            if (veEl) veEl.innerText = '불러오는 중…';
+          }
           document.getElementById('viewPeople').innerText = p.people || '-';
           const statusBadge = document.getElementById('viewStatus');
           statusBadge.innerText = status;
@@ -2227,6 +2269,22 @@
           approveBtn.disabled = (status === '승인');
           rejectBtn.disabled = (status === '반려');
           resModal.show();
+
+          if (!p.piiDecrypted) {
+            try {
+              var row = await ensureReservationPiiDecrypted(info.event.id, info.event);
+              var contactVal = row ? row.contact : null;
+              var emailVal = row ? row.visitor_email : null;
+              document.getElementById('viewContact').innerText = formatPhoneNumber(contactVal);
+              if (veEl) {
+                veEl.innerText = (emailVal && String(emailVal).trim() && emailVal !== '-') ? emailVal : '-';
+              }
+            } catch (e) {
+              alert('연락처·이메일 불러오기 실패: ' + (e.message || e));
+              document.getElementById('viewContact').innerText = '-';
+              if (veEl) veEl.innerText = '-';
+            }
+          }
         }
       });
       calendar.render();
