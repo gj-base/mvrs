@@ -1,5 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import {
+  deadlineErrorMessage,
+  isUserActionAllowed,
+} from "../_shared/booking_deadline.ts";
 
 /** 대시보드 단일 파일 배포 시 `_shared` 미포함으로 인한 번들 오류 방지 (로직은 _shared/booking_submit_block_ip.ts 와 동일) */
 function getClientSourceIp(req: Request): string {
@@ -77,6 +81,11 @@ const LUNCH_END_MIN = 13 * 60;
 const DAY_END_MIN = 16 * 60;
 const SUMMER_BLACKOUT_START_MIN = 13 * 60;
 const SUMMER_BLACKOUT_END_MIN = 14 * 60;
+const TEMP_SLOT_BLACKOUT_START_YMD = "2026-08-03";
+const TEMP_SLOT_BLACKOUT_END_YMD = "2026-09-03";
+const TEMP_BLOCKED_SLOT_MINS = [11 * 60 + 30, 15 * 60 + 30];
+const TEMP_SLOT_BLACKOUT_ERROR =
+  "2026년 8월 3일~9월 3일 기간에는 11:30·15:30 예약이 불가합니다. 다른 시간을 선택해 주세요.";
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -237,6 +246,26 @@ function overlapsSummerAfternoonBlackout(
   return sm < SUMMER_BLACKOUT_END_MIN && end > SUMMER_BLACKOUT_START_MIN;
 }
 
+function isYmdInTempSlotBlackoutPeriod(ymd: string): boolean {
+  return ymd >= TEMP_SLOT_BLACKOUT_START_YMD && ymd <= TEMP_SLOT_BLACKOUT_END_YMD;
+}
+
+function overlapsTempSlotBlackout(
+  startSlot: string,
+  durationMins: number,
+  ymd: string,
+): boolean {
+  if (!ymd || !isYmdInTempSlotBlackoutPeriod(ymd)) return false;
+  const sm = slotStartToMinutes(startSlot);
+  if (sm == null) return false;
+  const end = sm + durationMins;
+  for (const bs of TEMP_BLOCKED_SLOT_MINS) {
+    const be = bs + 30;
+    if (sm < be && end > bs) return true;
+  }
+  return false;
+}
+
 function windowsOverlappingBooking(
   startSlot: string,
   durationMins: number,
@@ -306,6 +335,9 @@ function slotRangeFits(
   if (overlapsSummerAfternoonBlackout(startSlot, durationMins, reservationYmd)) {
     return false;
   }
+  if (overlapsTempSlotBlackout(startSlot, durationMins, reservationYmd)) {
+    return false;
+  }
   const keys = windowsOverlappingBooking(startSlot, durationMins);
   for (const s of keys) {
     if (occupancy[s] === undefined) return false;
@@ -336,6 +368,41 @@ type SubmitBody = {
   doc_url_1?: string;
   doc_url_2?: string | null;
 };
+
+async function invokeConfirmationEmail(
+  reservationId: string,
+): Promise<{ sent: boolean; error?: string }> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const adminSecret = Deno.env.get("ADMIN_NOTIFY_SECRET") ?? "";
+  if (!supabaseUrl || !serviceKey || !adminSecret) {
+    return { sent: false, error: "mail config missing" };
+  }
+  try {
+    const r = await fetch(`${supabaseUrl}/functions/v1/send-reservation-status-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        reservation_id: reservationId,
+        admin_secret: adminSecret,
+        notify_for_status: "승인",
+      }),
+    });
+    const j = await r.json().catch(() => null) as Record<string, unknown> | null;
+    if (!r.ok) {
+      return { sent: false, error: String(j?.error ?? r.status) };
+    }
+    if (j?.skipped) {
+      return { sent: false, error: String(j.reason ?? "skipped") };
+    }
+    return { sent: true };
+  } catch (e) {
+    return { sent: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -468,12 +535,15 @@ Deno.serve(async (req: Request) => {
 
   const todayKst = kstYmd();
   const maxYmd = kstMaxBookYmdInclusive(todayKst);
-  if (date < todayKst || date > maxYmd) {
+  if (date > maxYmd) {
     return json(200, {
       ok: false,
       error:
         "예약은 오늘부터 7일 후까지(오늘 포함)만 가능합니다. 달력에서 선택 가능한 날짜를 다시 확인해 주세요.",
     });
+  }
+  if (!isUserActionAllowed(date, "submit_or_update")) {
+    return json(200, { ok: false, error: deadlineErrorMessage("submit_or_update") });
   }
 
   const { data: dupCompany, error: dupErr } = await sb
@@ -580,6 +650,9 @@ Deno.serve(async (req: Request) => {
         "하절기(7월 1일~8월 31일)에는 13:00~14:00 구간과 겹치는 예약이 불가합니다. 다른 시간을 선택해 주세요.",
     });
   }
+  if (overlapsTempSlotBlackout(timeSlot, effDur, date)) {
+    return json(200, { ok: false, error: TEMP_SLOT_BLACKOUT_ERROR });
+  }
   if (!slotRangeFits(occSubmit, timeSlot, effDur, date)) {
     return json(200, {
       ok: false,
@@ -653,10 +726,14 @@ Deno.serve(async (req: Request) => {
     doc_url_1: doc1,
     doc_url_2: doc2,
     doc_url_3: null,
-    status: "대기",
+    status: "승인",
   };
 
-  const { error: insertErr } = await sbAdmin.from("reservations").insert(insertRow);
+  const { data: inserted, error: insertErr } = await sbAdmin
+    .from("reservations")
+    .insert(insertRow)
+    .select("id")
+    .single();
   if (insertErr) {
     return json(200, {
       ok: false,
@@ -664,5 +741,15 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  return json(200, { ok: true });
+  let mailSent = false;
+  let mailNote: string | undefined;
+  if (inserted?.id != null) {
+    const mailResult = await invokeConfirmationEmail(String(inserted.id));
+    mailSent = mailResult.sent;
+    if (!mailResult.sent && mailResult.error) {
+      mailNote = mailResult.error;
+    }
+  }
+
+  return json(200, { ok: true, mail_sent: mailSent, mail_note: mailNote ?? null });
 });

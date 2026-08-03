@@ -1,5 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import {
+  deadlineErrorMessage,
+  isApprovedStatus,
+  isUserActionAllowed,
+} from "../_shared/booking_deadline.ts";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +32,11 @@ const LUNCH_END_MIN = 13 * 60;
 const DAY_END_MIN = 16 * 60;
 const SUMMER_BLACKOUT_START_MIN = 13 * 60;
 const SUMMER_BLACKOUT_END_MIN = 14 * 60;
+const TEMP_SLOT_BLACKOUT_START_YMD = "2026-08-03";
+const TEMP_SLOT_BLACKOUT_END_YMD = "2026-09-03";
+const TEMP_BLOCKED_SLOT_MINS = [11 * 60 + 30, 15 * 60 + 30];
+const TEMP_SLOT_BLACKOUT_ERROR =
+  "2026년 8월 3일~9월 3일 기간에는 11:30·15:30 예약이 불가합니다. 다른 시간을 선택해 주세요.";
 
 type Action = "list" | "get" | "update" | "delete";
 
@@ -238,6 +248,26 @@ function overlapsSummerAfternoonBlackout(
   return sm < SUMMER_BLACKOUT_END_MIN && end > SUMMER_BLACKOUT_START_MIN;
 }
 
+function isYmdInTempSlotBlackoutPeriod(ymd: string): boolean {
+  return ymd >= TEMP_SLOT_BLACKOUT_START_YMD && ymd <= TEMP_SLOT_BLACKOUT_END_YMD;
+}
+
+function overlapsTempSlotBlackout(
+  startSlot: string,
+  durationMins: number,
+  ymd: string,
+): boolean {
+  if (!ymd || !isYmdInTempSlotBlackoutPeriod(ymd)) return false;
+  const sm = slotStartToMinutes(startSlot);
+  if (sm == null) return false;
+  const end = sm + durationMins;
+  for (const bs of TEMP_BLOCKED_SLOT_MINS) {
+    const be = bs + 30;
+    if (sm < be && end > bs) return true;
+  }
+  return false;
+}
+
 function windowsOverlappingBooking(
   startSlot: string,
   durationMins: number,
@@ -305,6 +335,9 @@ function slotRangeFits(
   if (overlapsSummerAfternoonBlackout(startSlot, durationMins, reservationYmd)) {
     return false;
   }
+  if (overlapsTempSlotBlackout(startSlot, durationMins, reservationYmd)) {
+    return false;
+  }
   const keys = windowsOverlappingBooking(startSlot, durationMins);
   for (const s of keys) {
     if (occupancy[s] === undefined) return false;
@@ -335,6 +368,9 @@ function parseListPageSize(v: unknown): number {
 function mapListRow(r: Record<string, unknown>) {
   const b = r.branches as { name?: string } | null;
   const c = r.companies as { name?: string } | null;
+  const visitYmd = String(r.reservation_date ?? "").slice(0, 10);
+  const st = r.status;
+  const approved = isApprovedStatus(st) && String(st).trim() !== "반려";
   return {
     id: r.id,
     created_at: r.created_at,
@@ -343,12 +379,14 @@ function mapListRow(r: Record<string, unknown>) {
     company_name: r.company_name,
     branch_id: r.branch_id,
     company_id: r.company_id,
-    status: r.status,
+    status: st,
     reservation_duration_minutes: r.reservation_duration_minutes,
     material_info: r.material_info,
     car_number_1: r.car_number_1,
     branch_name: b?.name ?? null,
     company_label: c?.name ?? r.company_name,
+    can_edit: approved && isUserActionAllowed(visitYmd, "submit_or_update"),
+    can_cancel: approved && isUserActionAllowed(visitYmd, "cancel"),
   };
 }
 
@@ -504,12 +542,15 @@ async function validateSubmitFields(
 
   const todayKst = kstYmd();
   const maxYmd = kstMaxBookYmdInclusive(todayKst);
-  if (date < todayKst || date > maxYmd) {
+  if (date > maxYmd) {
     return {
       ok: false,
       error:
         "예약은 오늘부터 7일 후까지(오늘 포함)만 가능합니다. 달력에서 선택 가능한 날짜를 다시 확인해 주세요.",
     };
+  }
+  if (!isUserActionAllowed(date, "submit_or_update")) {
+    return { ok: false, error: deadlineErrorMessage("submit_or_update") };
   }
 
   let dupQ = sbAdmin
@@ -621,6 +662,9 @@ async function validateSubmitFields(
       error:
         "하절기(7월 1일~8월 31일)에는 13:00~14:00 구간과 겹치는 예약이 불가합니다. 다른 시간을 선택해 주세요.",
     };
+  }
+  if (overlapsTempSlotBlackout(timeSlot, effDur, date)) {
+    return { ok: false, error: TEMP_SLOT_BLACKOUT_ERROR };
   }
   if (!slotRangeFits(occ, timeSlot, effDur, date)) {
     return {
@@ -869,15 +913,27 @@ Deno.serve(async (req: Request) => {
       (bRow as { name?: string } | null)?.name ?? null,
       (cRow as { name?: string } | null)?.name ?? ex.company_name as string,
     );
-    return json(200, { ok: true, row, status: str(ex.status) || "대기" });
+    return json(200, {
+      ok: true,
+      row,
+      status: str(ex.status) || "승인",
+      can_edit: isApprovedStatus(ex.status) &&
+        isUserActionAllowed(String(ex.reservation_date).slice(0, 10), "submit_or_update"),
+      can_cancel: isApprovedStatus(ex.status) &&
+        isUserActionAllowed(String(ex.reservation_date).slice(0, 10), "cancel"),
+    });
   }
 
   if (action === "delete") {
-    if (str(ex.status) !== "대기") {
+    const visitYmd = String(ex.reservation_date).slice(0, 10);
+    if (!isApprovedStatus(ex.status)) {
       return json(200, {
         ok: false,
-        error: "승인 대기 상태의 예약만 신청 취소(삭제)할 수 있습니다.",
+        error: "확정(승인)된 예약만 신청 취소(삭제)할 수 있습니다.",
       });
+    }
+    if (!isUserActionAllowed(visitYmd, "cancel")) {
+      return json(200, { ok: false, error: deadlineErrorMessage("cancel") });
     }
     const access = await assertCanAccessReservation(
       sbAdmin,
@@ -892,7 +948,7 @@ Deno.serve(async (req: Request) => {
       .from("reservations")
       .delete()
       .eq("id", resId)
-      .eq("status", "대기");
+      .in("status", ["승인", "대기"]);
     if (delErr) {
       return json(200, { ok: false, error: "삭제 오류: " + delErr.message });
     }
@@ -900,11 +956,15 @@ Deno.serve(async (req: Request) => {
   }
 
   if (action === "update") {
-    if (str(ex.status) !== "대기") {
+    const visitYmd = String(ex.reservation_date).slice(0, 10);
+    if (!isApprovedStatus(ex.status)) {
       return json(200, {
         ok: false,
-        error: "승인 대기 상태의 예약만 수정할 수 있습니다.",
+        error: "확정(승인)된 예약만 수정할 수 있습니다.",
       });
+    }
+    if (!isUserActionAllowed(visitYmd, "submit_or_update")) {
+      return json(200, { ok: false, error: deadlineErrorMessage("submit_or_update") });
     }
     const access = await assertCanAccessReservation(
       sbAdmin,
@@ -935,7 +995,7 @@ Deno.serve(async (req: Request) => {
       .from("reservations")
       .update(patch)
       .eq("id", resId)
-      .eq("status", "대기");
+      .in("status", ["승인", "대기"]);
     if (updErr) {
       return json(200, { ok: false, error: "수정 오류: " + updErr.message });
     }

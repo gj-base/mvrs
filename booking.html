@@ -1214,6 +1214,7 @@
                       <div class="time-select-below-slots">
                         <p class="text-muted small mb-0" id="timeSelectHint"></p>
                         <p class="time-summer-notice mb-0 d-none" id="timeSummerNotice" role="note">하절기(7월 1일~8월 31일)에는 13:00~14:00 구간은 예약할 수 없습니다.</p>
+                        <p class="time-summer-notice mb-0 d-none" id="timeTempSlotNotice" role="note">2026년 8월 3일~9월 3일 기간에는 11:30·15:30 예약이 불가합니다.</p>
                       </div>
                     </div>
                     <input type="hidden" id="time" name="time" required>
@@ -2742,6 +2743,10 @@
     /** 하절기(7.1~8.31) 13:00~14:00 구간과 겹치는 예약 불가 */
     const SUMMER_BLACKOUT_START_MIN = 13 * 60;
     const SUMMER_BLACKOUT_END_MIN = 14 * 60;
+    /** 2026-08-03~2026-09-03 11:30·15:30 예약 불가 */
+    const TEMP_SLOT_BLACKOUT_START_YMD = '2026-08-03';
+    const TEMP_SLOT_BLACKOUT_END_YMD = '2026-09-03';
+    const TEMP_BLOCKED_SLOT_MINS = [11 * 60 + 30, 15 * 60 + 30];
 
     const DAY_NAMES = ['일','월','화','수','목','금','토'];
 
@@ -2762,6 +2767,23 @@
       return sm < SUMMER_BLACKOUT_END_MIN && end > SUMMER_BLACKOUT_START_MIN;
     }
 
+    function isYmdInTempSlotBlackoutPeriod(ymd) {
+      return ymd >= TEMP_SLOT_BLACKOUT_START_YMD && ymd <= TEMP_SLOT_BLACKOUT_END_YMD;
+    }
+
+    function overlapsTempSlotBlackout(startSlot, durationMins, ymd) {
+      if (!ymd || !isYmdInTempSlotBlackoutPeriod(ymd)) return false;
+      var sm = slotStartToMinutes(startSlot);
+      if (sm == null) return false;
+      var end = sm + durationMins;
+      for (var ti = 0; ti < TEMP_BLOCKED_SLOT_MINS.length; ti++) {
+        var bs = TEMP_BLOCKED_SLOT_MINS[ti];
+        var be = bs + 30;
+        if (sm < be && end > bs) return true;
+      }
+      return false;
+    }
+
     function updateSummerNoticeVisibility() {
       var el = document.getElementById('timeSummerNotice');
       if (!el) return;
@@ -2770,6 +2792,14 @@
         el.classList.remove('d-none');
       } else {
         el.classList.add('d-none');
+      }
+      var tempEl = document.getElementById('timeTempSlotNotice');
+      if (tempEl) {
+        if (ymd && isYmdInTempSlotBlackoutPeriod(ymd)) {
+          tempEl.classList.remove('d-none');
+        } else {
+          tempEl.classList.add('d-none');
+        }
       }
     }
 
@@ -3287,6 +3317,7 @@
       if (end > DAY_END_MIN) return false;
       if (sm < LUNCH_END_MIN && end > LUNCH_START_MIN) return false;
       if (overlapsSummerAfternoonBlackout(startSlot, durationMins, reservationYmd)) return false;
+      if (overlapsTempSlotBlackout(startSlot, durationMins, reservationYmd)) return false;
       var keys = windowsOverlappingBooking(startSlot, durationMins);
       for (var i = 0; i < keys.length; i++) {
         var s = keys[i];
