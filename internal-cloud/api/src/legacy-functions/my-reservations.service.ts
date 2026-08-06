@@ -4,6 +4,11 @@ import type { Request } from 'express';
 import type { Pool } from 'pg';
 import { AuthService } from '../auth/auth.service';
 import { decryptPiiField, encryptPiiContact, encryptPiiEmail } from './pii.util';
+import {
+  deadlineErrorMessage,
+  isApprovedStatus,
+  isUserActionAllowed,
+} from './booking-deadline.util';
 
 const SLOT_WINDOWS = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
@@ -15,6 +20,13 @@ const LUNCH_END_MIN = 13 * 60;
 const DAY_END_MIN = 16 * 60;
 const SUMMER_BLACKOUT_START_MIN = 13 * 60;
 const SUMMER_BLACKOUT_END_MIN = 14 * 60;
+const TEMP_SLOT_BLACKOUT_START_YMD = '2026-08-03';
+const TEMP_SLOT_BLACKOUT_END_YMD = '2026-09-03';
+const TEMP_BLOCKED_SLOT_MINS = [11 * 60 + 30, 15 * 60 + 30];
+const AUG14_AFTERNOON_BLACKOUT_YMD = '2026-08-14';
+const AUG14_AFTERNOON_BLOCKED_SLOT_MINS = [14 * 60, 14 * 60 + 30, 15 * 60, 15 * 60 + 30];
+const TEMP_SLOT_BLACKOUT_ERROR =
+  '2026년 8월 3일~9월 3일 기간에는 11:30·15:30 예약이 불가합니다. 다른 시간을 선택해 주세요.';
 
 function str(v: unknown): string {
   if (v == null) return '';
@@ -92,6 +104,34 @@ function overlapsSummerAfternoonBlackout(startSlot: string, durationMins: number
   return sm < SUMMER_BLACKOUT_END_MIN && end > SUMMER_BLACKOUT_START_MIN;
 }
 
+function isYmdInTempSlotBlackoutPeriod(ymd: string): boolean {
+  return ymd >= TEMP_SLOT_BLACKOUT_START_YMD && ymd <= TEMP_SLOT_BLACKOUT_END_YMD;
+}
+
+function overlapsTempSlotBlackout(startSlot: string, durationMins: number, ymd: string): boolean {
+  if (!ymd || !isYmdInTempSlotBlackoutPeriod(ymd)) return false;
+  const sm = slotStartToMinutes(startSlot);
+  if (sm == null) return false;
+  const end = sm + durationMins;
+  for (const bs of TEMP_BLOCKED_SLOT_MINS) {
+    const be = bs + 30;
+    if (sm < be && end > bs) return true;
+  }
+  return false;
+}
+
+function overlapsAug14AfternoonBlackout(startSlot: string, durationMins: number, ymd: string): boolean {
+  if (ymd !== AUG14_AFTERNOON_BLACKOUT_YMD) return false;
+  const sm = slotStartToMinutes(startSlot);
+  if (sm == null) return false;
+  const end = sm + durationMins;
+  for (const bs of AUG14_AFTERNOON_BLOCKED_SLOT_MINS) {
+    const be = bs + 30;
+    if (sm < be && end > bs) return true;
+  }
+  return false;
+}
+
 function windowsOverlappingBooking(startSlot: string, durationMins: number): string[] {
   const sm = slotStartToMinutes(startSlot);
   if (sm == null) return [];
@@ -152,6 +192,8 @@ function slotRangeFits(
   if (end > DAY_END_MIN) return false;
   if (sm < LUNCH_END_MIN && end > LUNCH_START_MIN) return false;
   if (overlapsSummerAfternoonBlackout(startSlot, durationMins, reservationYmd)) return false;
+  if (overlapsTempSlotBlackout(startSlot, durationMins, reservationYmd)) return false;
+  if (overlapsAug14AfternoonBlackout(startSlot, durationMins, reservationYmd)) return false;
   for (const s of windowsOverlappingBooking(startSlot, durationMins)) {
     if (occupancy[s] === undefined || occupancy[s]! > 0) return false;
   }
@@ -235,7 +277,15 @@ export class MyReservationsService {
         status: 200 as const,
         body: {
           ok: true,
-          items: r.rows,
+          items: r.rows.map((row) => {
+            const visitYmd = String(row.reservation_date ?? '').slice(0, 10);
+            const approved = isApprovedStatus(row.status);
+            return {
+              ...row,
+              can_edit: approved && isUserActionAllowed(visitYmd, 'submit_or_update'),
+              can_cancel: approved && isUserActionAllowed(visitYmd, 'cancel'),
+            };
+          }),
           total,
           page: safePage,
           page_size: pageSize,
@@ -261,28 +311,56 @@ export class MyReservationsService {
 
     if (action === 'get') {
       const row = await this.rowToClient(pool, ex, piiSecret);
-      return { status: 200 as const, body: { ok: true, row, status: str(ex.status) || '대기' } };
+      const visitYmd = String(ex.reservation_date ?? '').slice(0, 10);
+      const approved = isApprovedStatus(ex.status);
+      return {
+        status: 200 as const,
+        body: {
+          ok: true,
+          row,
+          status: str(ex.status) || '승인',
+          can_edit: approved && isUserActionAllowed(visitYmd, 'submit_or_update'),
+          can_cancel: approved && isUserActionAllowed(visitYmd, 'cancel'),
+        },
+      };
     }
 
     if (action === 'delete') {
-      if (str(ex.status) !== '대기') {
+      const visitYmd = String(ex.reservation_date ?? '').slice(0, 10);
+      if (!isApprovedStatus(ex.status)) {
         return {
           status: 200 as const,
-          body: { ok: false, error: '승인 대기 상태의 예약만 신청 취소(삭제)할 수 있습니다.' },
+          body: { ok: false, error: '확정(승인)된 예약만 신청 취소(삭제)할 수 있습니다.' },
+        };
+      }
+      if (!isUserActionAllowed(visitYmd, 'cancel')) {
+        return {
+          status: 200 as const,
+          body: { ok: false, error: deadlineErrorMessage('cancel') },
         };
       }
       const access = await this.assertAccess(pool, user.sub, exCompanyId, Number(ex.branch_id));
       if (!access.ok) return { status: 200 as const, body: { ok: false, error: access.error } };
       await pool.query(
-        `delete from public.reservations where id = $1::bigint and status = $2`,
-        [resId, '대기'],
+        `delete from public.reservations where id = $1::bigint and status = any($2::text[])`,
+        [resId, ['승인', '대기']],
       );
       return { status: 200 as const, body: { ok: true } };
     }
 
     if (action === 'update') {
-      if (str(ex.status) !== '대기') {
-        return { status: 200 as const, body: { ok: false, error: '승인 대기 상태의 예약만 수정할 수 있습니다.' } };
+      const visitYmd = String(ex.reservation_date ?? '').slice(0, 10);
+      if (!isApprovedStatus(ex.status)) {
+        return {
+          status: 200 as const,
+          body: { ok: false, error: '확정(승인)된 예약만 수정할 수 있습니다.' },
+        };
+      }
+      if (!isUserActionAllowed(visitYmd, 'submit_or_update')) {
+        return {
+          status: 200 as const,
+          body: { ok: false, error: deadlineErrorMessage('submit_or_update') },
+        };
       }
       const branchId =
         typeof body.branch_id === 'number'
@@ -307,7 +385,7 @@ export class MyReservationsService {
           vehicle_tonnage = $13, vehicle_tonnage_2 = $14, reservation_duration_minutes = $15,
           duration_mode = $16, recommended_duration_minutes = $17, recommended_reasons = CAST($18 AS jsonb),
           doc_url_1 = $19, doc_url_2 = $20
-         where id = $21::bigint and status = $22`,
+         where id = $21::bigint and status = any($22::text[])`,
         [
           p.date,
           p.timeSlot,
@@ -330,7 +408,7 @@ export class MyReservationsService {
           p.doc1,
           p.doc2,
           resId,
-          '대기',
+          ['승인', '대기'],
         ],
       );
       return { status: 200 as const, body: { ok: true } };
@@ -448,12 +526,15 @@ export class MyReservationsService {
     }
     const todayKst = kstYmd();
     const maxYmd = kstMaxBookYmdInclusive(todayKst);
-    if (date < todayKst || date > maxYmd) {
+    if (date > maxYmd) {
       return {
         ok: false,
         error:
           '예약은 오늘부터 7일 후까지(오늘 포함)만 가능합니다. 달력에서 선택 가능한 날짜를 다시 확인해 주세요.',
       };
+    }
+    if (!isUserActionAllowed(date, 'submit_or_update')) {
+      return { ok: false, error: deadlineErrorMessage('submit_or_update') };
     }
 
     const dup = await pool.query(
@@ -519,6 +600,9 @@ export class MyReservationsService {
         error:
           '하절기(7월 1일~8월 31일)에는 13:00~14:00 구간과 겹치는 예약이 불가합니다. 다른 시간을 선택해 주세요.',
       };
+    }
+    if (overlapsTempSlotBlackout(timeSlot, effDur, date)) {
+      return { ok: false, error: TEMP_SLOT_BLACKOUT_ERROR };
     }
     if (!slotRangeFits(occ, timeSlot, effDur, date)) {
       return {

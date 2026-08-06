@@ -375,10 +375,64 @@
     .landing-hero-bg {
       position: absolute;
       inset: 0;
-      background:
-        linear-gradient(105deg, rgba(26, 54, 93, 0.9) 0%, rgba(26, 54, 93, 0.76) 42%, rgba(26, 54, 93, 0.58) 100%),
-        url('assets/main-img.jpg') center/cover no-repeat;
       z-index: 0;
+      overflow: hidden;
+      background: #3a4a5c;
+    }
+    .landing-hero-bg-panel {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+    }
+    /* 겹침은 좁게 + jj는 거의 전 폭 불투명, 맨 오른쪽 끝만 짧게 페더(본문이 가려져 보이지 않게) */
+    .landing-hero-bg-panel--jj {
+      left: 0;
+      width: calc(50% + clamp(10px, 1.4vw, 22px));
+      z-index: 2;
+      background-image: url('assets/kepco_jj3.png');
+      -webkit-mask-image: linear-gradient(
+        to right,
+        #000 0%,
+        #000 88%,
+        rgba(0, 0, 0, 0.92) 93%,
+        rgba(0, 0, 0, 0.45) 97%,
+        transparent 100%
+      );
+      mask-image: linear-gradient(
+        to right,
+        #000 0%,
+        #000 88%,
+        rgba(0, 0, 0, 0.92) 93%,
+        rgba(0, 0, 0, 0.45) 97%,
+        transparent 100%
+      );
+      mask-mode: alpha;
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+    }
+    .landing-hero-bg-panel--gj {
+      right: 0;
+      width: calc(50% + clamp(10px, 1.4vw, 22px));
+      z-index: 1;
+      background-image: url('assets/kepco_gj3.png');
+    }
+    .landing-hero-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      background: linear-gradient(
+        105deg,
+        rgba(26, 54, 93, 0.9) 0%,
+        rgba(26, 54, 93, 0.76) 42%,
+        rgba(26, 54, 93, 0.58) 100%
+      );
+      pointer-events: none;
     }
     .landing-hero-inner {
       position: relative;
@@ -913,7 +967,10 @@
   </header>
 
   <section class="landing-hero" aria-label="시스템 소개">
-    <div class="landing-hero-bg" aria-hidden="true"></div>
+    <div class="landing-hero-bg" aria-hidden="true">
+      <div class="landing-hero-bg-panel landing-hero-bg-panel--jj"></div>
+      <div class="landing-hero-bg-panel landing-hero-bg-panel--gj"></div>
+    </div>
     <div class="landing-hero-inner">
       <h2 class="landing-hero-title">자재센터 불용자재 환입차량 예약시스템</h2>
       <p class="landing-hero-desc">
@@ -1038,7 +1095,7 @@
               <div class="landing-support-card">
                 <p class="landing-support-card-label">연락처</p>
                 <p class="landing-support-card-phone">062-260-5133, 5145</p>
-                <p class="landing-support-card-note">예약 승인·변경·취소는 담당자에게 문의해 주세요.</p>
+                <p class="landing-support-card-note">예약은 신청 즉시 확정됩니다. 변경·취소는 마감 시간(전날 16:00/14:00) 내에 내 예약에서 처리해 주세요.</p>
               </div>
             </div>
           </aside>
@@ -1107,6 +1164,7 @@
 
   <script src="mvrs-api-client.js"></script>
   <script src="config.js"></script>
+  <script src="booking-deadline.js"></script>
   <script>
     (function setupLandingSafetyRulesModal() {
       var root = document.getElementById('landingSafetyRulesModal');
@@ -1315,6 +1373,11 @@
       var DAY_END_MIN = 16 * 60;
       var SUMMER_BLACKOUT_START_MIN = 13 * 60;
       var SUMMER_BLACKOUT_END_MIN = 14 * 60;
+      var TEMP_SLOT_BLACKOUT_START_YMD = '2026-08-03';
+      var TEMP_SLOT_BLACKOUT_END_YMD = '2026-09-03';
+      var TEMP_BLOCKED_SLOT_MINS = [11 * 60 + 30, 15 * 60 + 30];
+      var AUG14_AFTERNOON_BLACKOUT_YMD = '2026-08-14';
+      var AUG14_AFTERNOON_BLOCKED_SLOT_MINS = [14 * 60, 14 * 60 + 30, 15 * 60, 15 * 60 + 30];
       var FINDER_ASSUMED_DURATION_MIN = 30;
 
       function isYmdSummerAfternoonBlackoutSeason(ymd) {
@@ -1323,6 +1386,36 @@
         var da = parseInt(String(ymd).slice(8, 10), 10);
         if (mo === 7) return da >= 1;
         if (mo === 8) return da <= 31;
+        return false;
+      }
+
+      function isYmdInTempSlotBlackoutPeriod(ymd) {
+        return ymd >= TEMP_SLOT_BLACKOUT_START_YMD && ymd <= TEMP_SLOT_BLACKOUT_END_YMD;
+      }
+
+      function overlapsTempSlotBlackout(startSlot, durationMins, ymd) {
+        if (!ymd || !isYmdInTempSlotBlackoutPeriod(ymd)) return false;
+        var sm = slotStartToMinutes(startSlot);
+        if (sm == null) return false;
+        var end = sm + durationMins;
+        for (var ti = 0; ti < TEMP_BLOCKED_SLOT_MINS.length; ti++) {
+          var bs = TEMP_BLOCKED_SLOT_MINS[ti];
+          var be = bs + 30;
+          if (sm < be && end > bs) return true;
+        }
+        return false;
+      }
+
+      function overlapsAug14AfternoonBlackout(startSlot, durationMins, ymd) {
+        if (ymd !== AUG14_AFTERNOON_BLACKOUT_YMD) return false;
+        var sm = slotStartToMinutes(startSlot);
+        if (sm == null) return false;
+        var end = sm + durationMins;
+        for (var ai = 0; ai < AUG14_AFTERNOON_BLOCKED_SLOT_MINS.length; ai++) {
+          var bs = AUG14_AFTERNOON_BLOCKED_SLOT_MINS[ai];
+          var be = bs + 30;
+          if (sm < be && end > bs) return true;
+        }
         return false;
       }
       var wkLabel = ['일', '월', '화', '수', '목', '금', '토'];
@@ -1343,6 +1436,11 @@
         var m = d.getMonth() + 1;
         var day = d.getDate();
         return y + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+      }
+
+      /** Nest API date → YYYY-MM-DD (Supabase는 이미 YYYY-MM-DD) */
+      function ymdFromApiDate(raw) {
+        return raw != null ? String(raw).substring(0, 10) : '';
       }
 
       function fmtKR(d) {
@@ -1478,6 +1576,8 @@
         if (reservationYmd && isYmdSummerAfternoonBlackoutSeason(reservationYmd)) {
           if (sm < SUMMER_BLACKOUT_END_MIN && end > SUMMER_BLACKOUT_START_MIN) return false;
         }
+        if (overlapsTempSlotBlackout(startSlot, durationMins, reservationYmd)) return false;
+        if (overlapsAug14AfternoonBlackout(startSlot, durationMins, reservationYmd)) return false;
         var keys = windowsOverlappingBooking(startSlot, durationMins);
         for (var i = 0; i < keys.length; i++) {
           var s = keys[i];
@@ -1589,6 +1689,8 @@
                 /* 전 지사 환입 불가일 */
               } else if (bmap && bmap[ymdTry]) {
                 /* 지사별 환입 불가일(구) */
+              } else if (window.MVRS_BOOKING_DEADLINE && !MVRS_BOOKING_DEADLINE.isUserActionAllowed(ymdTry, 'submit_or_update')) {
+                /* 신청·수정 마감 */
               } else {
                 return ymdTry;
               }
@@ -1757,7 +1859,8 @@
           if (r3.error) throw r3.error;
           reservationsByDate = {};
           (r3.data || []).forEach(function (row) {
-            var k = row.reservation_date;
+            var k = ymdFromApiDate(row.reservation_date);
+            if (!k) return;
             if (!reservationsByDate[k]) reservationsByDate[k] = [];
             reservationsByDate[k].push(row);
           });

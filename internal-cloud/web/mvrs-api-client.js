@@ -194,6 +194,35 @@
         }
       },
 
+      /** Supabase auth.getUser 호환 — 서버(/auth/session) 기준 JWT 검증 */
+      getUser: async function () {
+        try {
+          var sessWrap = await client.auth.getSession();
+          var session = sessWrap && sessWrap.data && sessWrap.data.session;
+          if (session && session.user) {
+            return { data: { user: session.user }, error: null };
+          }
+          var err = (sessWrap && sessWrap.error) || { message: 'Not authenticated' };
+          return { data: { user: null }, error: err };
+        } catch (e) {
+          return { data: { user: null }, error: { message: String(e.message || e) } };
+        }
+      },
+
+      /** Supabase auth.refreshSession 호환 — 내부 API는 refresh token 없음, 유효 세션 재확인 */
+      refreshSession: async function () {
+        try {
+          var sessWrap = await client.auth.getSession();
+          var session = sessWrap && sessWrap.data && sessWrap.data.session;
+          if (session && session.user) {
+            return { data: { session: session, user: session.user }, error: null };
+          }
+          return { data: { session: null, user: null }, error: null };
+        } catch (e) {
+          return { data: { session: null, user: null }, error: { message: String(e.message || e) } };
+        }
+      },
+
       signInWithPassword: async function (creds) {
         var email = creds && creds.email ? String(creds.email).trim() : '';
         var password = creds && creds.password != null ? String(creds.password) : '';

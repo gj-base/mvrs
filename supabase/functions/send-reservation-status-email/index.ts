@@ -1,6 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { checkAdminSourceIp } from "../_shared/admin_source_ip.ts";
 
 const PII_PREFIX = "enc:v1:";
 const PBKDF2_SALT = new Uint8Array([
@@ -42,6 +41,22 @@ async function getPiiKey(secret: string): Promise<CryptoKey> {
 function str(v: unknown): string {
   if (v == null) return "";
   return String(v).trim();
+}
+
+/** 동일 상태(승인/반려)에 대한 중복 메일만 차단. 승인 후 반려 등 상태 변경 시 재발송 허용 */
+function isStatusMailAlreadySent(
+  row: {
+    status_notification_sent?: boolean | null;
+    status_notified_for?: string | null;
+  },
+  st: string,
+): boolean {
+  const notifiedFor = str(row.status_notified_for);
+  if (notifiedFor && notifiedFor === st) return true;
+  if (!notifiedFor && row.status_notification_sent === true && st === "승인") {
+    return true;
+  }
+  return false;
 }
 
 function resolveVehicleCountFromRow(row: {
@@ -307,14 +322,6 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const ipCheck = checkAdminSourceIp(req);
-  if (!ipCheck.ok) {
-    return new Response(JSON.stringify({ error: ipCheck.message }), {
-      status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
   let body: {
     reservation_id?: string;
     admin_secret?: string;
@@ -390,6 +397,7 @@ Deno.serve(async (req: Request) => {
     id: string;
     status: string | null;
     status_notification_sent: boolean | null;
+    status_notified_for: string | null;
     visitor_email: string | null;
     company_name: string | null;
     reservation_date: string | null;
@@ -406,7 +414,7 @@ Deno.serve(async (req: Request) => {
     const { data: fetched, error: selErr } = await sb
       .from("reservations")
       .select(
-        "id, status, status_notification_sent, visitor_email, company_name, reservation_date, reservation_time, car_number_1, car_number_2, material_info, vehicle_count, branches(name)",
+        "id, status, status_notification_sent, status_notified_for, visitor_email, company_name, reservation_date, reservation_time, car_number_1, car_number_2, material_info, vehicle_count, branches(name)",
       )
       .eq("id", reservationId)
       .maybeSingle();
@@ -456,9 +464,9 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  if (row.status_notification_sent === true) {
+  if (isStatusMailAlreadySent(row, st)) {
     return new Response(
-      JSON.stringify({ ok: true, skipped: true, reason: "already sent" }),
+      JSON.stringify({ ok: true, skipped: true, reason: "already sent for " + st }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
@@ -538,7 +546,7 @@ Deno.serve(async (req: Request) => {
 
   const { error: upErr } = await sb
     .from("reservations")
-    .update({ status_notification_sent: true })
+    .update({ status_notification_sent: true, status_notified_for: st })
     .eq("id", reservationId);
 
   if (upErr) {

@@ -58,6 +58,17 @@ export class AuthService {
     return r.rows[0]?.is_master === true;
   }
 
+  /** 로그인 성공 시 auth.users.last_sign_in_at 갱신 (관리자 페이지 최근 로그인 표시용) */
+  private async touchLastSignIn(userId: string): Promise<void> {
+    await this.pg.pool.query(
+      `update auth.users
+       set last_sign_in_at = now(),
+           updated_at = now()
+       where id = $1::uuid`,
+      [userId],
+    );
+  }
+
   async signIn(email: string, password: string) {
     const em = email.trim().toLowerCase();
     if (!em || !password) {
@@ -75,6 +86,7 @@ export class AuthService {
     if (!ok) {
       throw new UnauthorizedException('Invalid login credentials');
     }
+    await this.touchLastSignIn(row.id);
     const access_token = this.issueToken(row.id, row.email);
     const is_master = await this.getIsMaster(row.id);
     return {
@@ -122,6 +134,7 @@ export class AuthService {
       await client.query('COMMIT');
       const autoConfirm = this.config.get<string>('AUTH_EMAIL_AUTO_CONFIRM') !== 'false';
       if (autoConfirm) {
+        await this.touchLastSignIn(row.id);
         const access_token = this.issueToken(row.id, row.email);
         return { access_token, user: { id: row.id, email: row.email } };
       }

@@ -35,6 +35,8 @@ const SUMMER_BLACKOUT_END_MIN = 14 * 60;
 const TEMP_SLOT_BLACKOUT_START_YMD = "2026-08-03";
 const TEMP_SLOT_BLACKOUT_END_YMD = "2026-09-03";
 const TEMP_BLOCKED_SLOT_MINS = [11 * 60 + 30, 15 * 60 + 30];
+const AUG14_AFTERNOON_BLACKOUT_YMD = "2026-08-14";
+const AUG14_AFTERNOON_BLOCKED_SLOT_MINS = [14 * 60, 14 * 60 + 30, 15 * 60, 15 * 60 + 30];
 const TEMP_SLOT_BLACKOUT_ERROR =
   "2026년 8월 3일~9월 3일 기간에는 11:30·15:30 예약이 불가합니다. 다른 시간을 선택해 주세요.";
 
@@ -268,6 +270,22 @@ function overlapsTempSlotBlackout(
   return false;
 }
 
+function overlapsAug14AfternoonBlackout(
+  startSlot: string,
+  durationMins: number,
+  ymd: string,
+): boolean {
+  if (ymd !== AUG14_AFTERNOON_BLACKOUT_YMD) return false;
+  const sm = slotStartToMinutes(startSlot);
+  if (sm == null) return false;
+  const end = sm + durationMins;
+  for (const bs of AUG14_AFTERNOON_BLOCKED_SLOT_MINS) {
+    const be = bs + 30;
+    if (sm < be && end > bs) return true;
+  }
+  return false;
+}
+
 function windowsOverlappingBooking(
   startSlot: string,
   durationMins: number,
@@ -336,6 +354,9 @@ function slotRangeFits(
     return false;
   }
   if (overlapsTempSlotBlackout(startSlot, durationMins, reservationYmd)) {
+    return false;
+  }
+  if (overlapsAug14AfternoonBlackout(startSlot, durationMins, reservationYmd)) {
     return false;
   }
   const keys = windowsOverlappingBooking(startSlot, durationMins);

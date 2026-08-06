@@ -9,6 +9,7 @@ import { checkBookingSubmitBlockedBySourceIp } from './booking-ip.util';
 import { decryptPiiField } from './pii.util';
 import { SubmitReservationService } from './submit-reservation.service';
 import { MyReservationsService } from './my-reservations.service';
+import { isStatusMailAlreadySent } from './reservation-status-email.helper';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
@@ -139,7 +140,7 @@ export class LegacyEdgeService {
         if (!id) return res.status(400).json({ ok: false, error: 'id가 필요합니다.' });
         const scope = String(body.blocked_scope ?? '') === 'branch' ? 'branch' : 'global';
         const table = scope === 'branch' ? 'branch_blocked_dates' : 'global_blocked_dates';
-        await this.pg.pool.query(`delete from public.${table} where id = $1::bigint`, [id]);
+        await this.pg.pool.query(`delete from public.${table} where id = $1::uuid`, [id]);
         return res.json({ ok: true });
       }
       if (action === 'popup_save') {
@@ -394,10 +395,6 @@ export class LegacyEdgeService {
   }
 
   private async sendReservationStatusEmail(req: Request, res: Response, rawBody: unknown) {
-    const ip = checkAdminSourceIp(req, this.config.get<string>('ADMIN_ALLOWED_SOURCE_IPS') ?? '');
-    if (!ip.ok) {
-      return res.status(403).json({ error: ip.message });
-    }
     const body = (rawBody || {}) as {
       reservation_id?: string;
       admin_secret?: string;
@@ -430,7 +427,7 @@ export class LegacyEdgeService {
     let lastRawStatus = '';
     for (let attempt = 0; attempt < wantRetry; attempt++) {
       const r = await this.pg.pool.query(
-        `select r.id, r.status, r.status_notification_sent, r.visitor_email, r.company_name,
+        `select r.id, r.status, r.status_notification_sent, r.status_notified_for, r.visitor_email, r.company_name,
                 r.reservation_date, r.reservation_time, r.car_number_1, r.car_number_2, r.material_info, r.vehicle_count,
                 json_build_object('name', b.name) as branches
          from public.reservations r
@@ -466,8 +463,8 @@ export class LegacyEdgeService {
         db_status: lastRawStatus || st || null,
       });
     }
-    if (row.status_notification_sent === true) {
-      return res.json({ ok: true, skipped: true, reason: 'already sent' });
+    if (isStatusMailAlreadySent(row, st)) {
+      return res.json({ ok: true, skipped: true, reason: 'already sent for ' + st });
     }
 
     const emailPlain = await decryptPiiField(row.visitor_email as string | null, piiSecret);
@@ -527,8 +524,8 @@ export class LegacyEdgeService {
     }
 
     await this.pg.pool.query(
-      `update public.reservations set status_notification_sent = true where id = $1::bigint`,
-      [reservationId],
+      `update public.reservations set status_notification_sent = true, status_notified_for = $2 where id = $1::bigint`,
+      [reservationId, st],
     );
     return res.json({ ok: true });
   }

@@ -34,9 +34,41 @@ function assertIdent(s: string, label: string) {
   }
 }
 
+/** `.in()` — date 컬럼은 date[], ID 등 숫자 컬럼은 bigint[] */
+const DATE_IN_COLUMNS = new Set(['reservation_date', 'blocked_date']);
+
 @Injectable()
 export class DbQueryService {
   constructor(private readonly pg: PgService) {}
+
+  private appendInFilter(
+    colSql: string,
+    col: string,
+    values: unknown,
+    p: number,
+    vals: unknown[],
+  ): { clause: string; nextP: number } {
+    const arr = Array.isArray(values) ? values : [];
+    if (!arr.length) {
+      return { clause: 'false', nextP: p };
+    }
+    if (DATE_IN_COLUMNS.has(col)) {
+      const dates = arr
+        .map((x) => String(x).substring(0, 10))
+        .filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
+      if (!dates.length) {
+        return { clause: 'false', nextP: p };
+      }
+      vals.push(dates);
+      return { clause: `${colSql} = any($${p}::date[])`, nextP: p + 1 };
+    }
+    const nums = arr.map((x) => Number(x)).filter((n) => Number.isFinite(n));
+    if (!nums.length) {
+      return { clause: 'false', nextP: p };
+    }
+    vals.push(nums);
+    return { clause: `${colSql} = any($${p}::bigint[])`, nextP: p + 1 };
+  }
 
   requiresAuth(body: DbQueryPayload): boolean {
     return body.table === 'user_profiles' || body.table === 'user_company_memberships';
@@ -167,13 +199,9 @@ export class DbQueryService {
         where.push(`"${f.col}" <> $${p++}`);
         vals.push(f.val);
       } else if (f.type === 'in') {
-        const arr = Array.isArray(f.val) ? f.val : [];
-        if (!arr.length) {
-          where.push('false');
-        } else {
-          where.push(`"${f.col}" = any($${p++}::bigint[])`);
-          vals.push(arr.map((x) => Number(x)).filter((n) => Number.isFinite(n)));
-        }
+        const inf = this.appendInFilter(`"${f.col}"`, f.col, f.val, p, vals);
+        where.push(inf.clause);
+        p = inf.nextP;
       }
     }
     const whereSql = where.length ? `where ${where.join(' and ')}` : '';
@@ -251,13 +279,9 @@ export class DbQueryService {
         parts.push(`${col} <> $${p++}`);
         vals.push(f.val);
       } else if (f.type === 'in') {
-        const arr = Array.isArray(f.val) ? f.val : [];
-        if (!arr.length) {
-          parts.push('false');
-        } else {
-          parts.push(`${col} = any($${p++}::bigint[])`);
-          vals.push(arr.map((x) => Number(x)).filter((n) => Number.isFinite(n)));
-        }
+        const inf = this.appendInFilter(col, f.col, f.val, p, vals);
+        parts.push(inf.clause);
+        p = inf.nextP;
       }
     }
     const sql = parts.length ? `where ${parts.join(' and ')}` : '';
@@ -281,7 +305,7 @@ export class DbQueryService {
     const lim =
       limit != null && Number.isFinite(limit) ? `limit ${Math.floor(limit)}` : '';
     const sql = `
-      select r.id, r.reservation_date, r.reservation_time, r.company_name, r.branch_id, r.company_id,
+      select r.id, r.created_at, r.reservation_date, r.reservation_time, r.company_name, r.branch_id, r.company_id,
         r.car_number_1, r.car_number_2, r.material_info, r.vehicle_count, r.contact, r.visitor_email,
         r.person_info, r.vehicle_tonnage, r.vehicle_tonnage_2, r.reservation_duration_minutes, r.duration_mode,
         r.doc_url_1, r.doc_url_2, r.doc_url_3, r.status, r.status_notification_sent,

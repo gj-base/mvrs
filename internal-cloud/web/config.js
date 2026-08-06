@@ -4,7 +4,7 @@
  */
 
 /** Nest API 경로 (Apache에서 ProxyPass /api -> Nest 권장) */
-var MVRS_API_BASE = '/api';
+var MVRS_API_BASE = 'http://127.0.0.1:3000/api';
 
 if (typeof window !== 'undefined') {
   window.MVRS_API_BASE = MVRS_API_BASE;
