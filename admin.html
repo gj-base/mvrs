@@ -594,6 +594,9 @@
         </div>
         <div class="card border-0 shadow-sm rounded-3 admin-companies-wrap">
           <div class="card-body p-4">
+            <div class="d-flex justify-content-end mb-3">
+              <button type="button" class="btn btn-sm btn-primary fw-semibold" id="btnCompanyCreateOpen">＋ 신규 업체 등록</button>
+            </div>
             <div class="row g-2 align-items-end flex-wrap mb-3">
               <div class="col-sm-6 col-md-3">
                 <label class="form-label small text-muted mb-0">지사</label>
@@ -672,6 +675,57 @@
             <div class="modal-footer">
               <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">닫기</button>
               <button type="button" class="btn btn-primary" id="btnCompanyBranchPreviewSave" disabled>변경 저장</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="companyCreateModal" tabindex="-1" aria-labelledby="companyCreateModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+          <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+              <div>
+                <div class="small text-primary fw-bold mb-1">업체 현황</div>
+                <h5 class="modal-title fw-bold" id="companyCreateModalTitle">신규 업체 등록</h5>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row g-3">
+                <div class="col-md-7">
+                  <label class="form-label fw-semibold" for="companyCreateName">업체명 <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="companyCreateName" maxlength="200" autocomplete="organization" placeholder="사업자등록증의 업체명을 입력하세요.">
+                </div>
+                <div class="col-md-5">
+                  <label class="form-label fw-semibold" for="companyCreateBrn">사업자번호 <span class="text-danger">*</span></label>
+                  <input type="text" inputmode="numeric" class="form-control" id="companyCreateBrn" maxlength="12" autocomplete="off" placeholder="000-00-00000">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-semibold" for="companyCreateRepresentative">대표자</label>
+                  <input type="text" class="form-control" id="companyCreateRepresentative" maxlength="100" autocomplete="name">
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label fw-semibold" for="companyCreateAddress">주소</label>
+                  <input type="text" class="form-control" id="companyCreateAddress" maxlength="500" autocomplete="street-address">
+                </div>
+                <div class="col-12">
+                  <div class="form-label fw-semibold">최초 환입 가능 지사 <span class="text-danger">*</span></div>
+                  <div class="border rounded-2 p-3 d-flex flex-wrap gap-3" id="companyCreateBranches"></div>
+                  <div class="form-text">한 곳 이상 선택하세요. 등록 후에도 업체현황에서 지사를 추가하거나 해제할 수 있습니다.</div>
+                </div>
+                <div class="col-12 d-none" id="companyCreateLocalAuthFields">
+                  <label class="form-label fw-semibold" for="companyCreateAdminSecret">관리자 암호</label>
+                  <input type="password" class="form-control" id="companyCreateAdminSecret" autocomplete="current-password" placeholder="로컬 저장 시 관리자 암호를 입력하세요.">
+                  <div class="form-text">등록된 관리자 공인 IP에서만 저장되며, 암호는 브라우저 메모리에만 유지됩니다.</div>
+                </div>
+              </div>
+              <div class="alert alert-light border small text-muted mt-3 mb-0">
+                등록한 사업자번호로 회원가입할 수 있습니다. 회원 멤버십은 실제 회원가입 시 선택한 지사 전체에 자동 생성됩니다.
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">닫기</button>
+              <button type="button" class="btn btn-primary" id="btnCompanyCreateSave">업체 등록</button>
             </div>
           </div>
         </div>
@@ -917,6 +971,7 @@
     var companiesRegistryLoaded = false;
     var companyBranchModalState = null;
     var companyBranchSaveBusy = false;
+    var companyCreateSaveBusy = false;
     var sitePopupsCache = [];
     /** 회원가입 현황 패널용 */
     var userSignupsRaw = [];
@@ -1974,6 +2029,117 @@
       saveBtn.textContent = on ? '저장 중…' : '변경 저장';
     }
 
+    function formatCompanyCreateBrn(value) {
+      var digits = normalizeCompanyRegistryBrn(value).slice(0, 10);
+      if (digits.length <= 3) return digits;
+      if (digits.length <= 5) return digits.slice(0, 3) + '-' + digits.slice(3);
+      return digits.slice(0, 3) + '-' + digits.slice(3, 5) + '-' + digits.slice(5);
+    }
+
+    function openCompanyCreateModal() {
+      var modalEl = document.getElementById('companyCreateModal');
+      var branchesBox = document.getElementById('companyCreateBranches');
+      if (!modalEl || !branchesBox) return;
+      document.getElementById('companyCreateName').value = '';
+      document.getElementById('companyCreateBrn').value = '';
+      document.getElementById('companyCreateRepresentative').value = '';
+      document.getElementById('companyCreateAddress').value = '';
+      var localAuthFields = document.getElementById('companyCreateLocalAuthFields');
+      var localSecretInput = document.getElementById('companyCreateAdminSecret');
+      if (localAuthFields) localAuthFields.classList.toggle('d-none', !localAdminPreviewMode || !!adminNotifySecretSession);
+      if (localSecretInput) localSecretInput.value = '';
+      branchesBox.innerHTML = '';
+      companiesRegistryBranches.forEach(function (branch) {
+        var id = 'companyCreateBranch' + String(branch.id);
+        var wrap = document.createElement('div');
+        wrap.className = 'form-check';
+        wrap.innerHTML = '<input class="form-check-input company-create-branch" type="checkbox" value="' +
+          escapeAttr(String(branch.id)) + '" id="' + escapeAttr(id) + '">' +
+          '<label class="form-check-label" for="' + escapeAttr(id) + '">' + escapeHtml(String(branch.name)) + '</label>';
+        branchesBox.appendChild(wrap);
+      });
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    function setCompanyCreateSaveBusy(on) {
+      companyCreateSaveBusy = !!on;
+      var btn = document.getElementById('btnCompanyCreateSave');
+      if (!btn) return;
+      btn.disabled = !!on;
+      btn.textContent = on ? '등록 중…' : '업체 등록';
+    }
+
+    async function saveCompanyCreate() {
+      if (companyCreateSaveBusy) return;
+      var name = String(document.getElementById('companyCreateName').value || '').trim();
+      var brn = normalizeCompanyRegistryBrn(document.getElementById('companyCreateBrn').value);
+      var representative = String(document.getElementById('companyCreateRepresentative').value || '').trim();
+      var address = String(document.getElementById('companyCreateAddress').value || '').trim();
+      var branchIds = Array.prototype.slice.call(document.querySelectorAll('.company-create-branch:checked')).map(function (el) {
+        return Number(el.value);
+      });
+      if (!name) {
+        alert('업체명을 입력해 주세요.');
+        document.getElementById('companyCreateName').focus();
+        return;
+      }
+      if (brn.length !== 10) {
+        alert('사업자번호 10자리를 입력해 주세요.');
+        document.getElementById('companyCreateBrn').focus();
+        return;
+      }
+      var existing = companiesRegistryGrouped.find(function (group) {
+        return normalizeCompanyRegistryBrn(group.business_registration_no) === brn;
+      });
+      if (existing) {
+        alert('이미 등록된 사업자번호입니다. 기존 업체 “' + existing.name + '”에서 지사를 추가해 주세요.');
+        return;
+      }
+      if (!branchIds.length) {
+        alert('최초 환입 가능 지사를 한 곳 이상 선택해 주세요.');
+        return;
+      }
+      var secret = adminNotifySecretSession;
+      if (localAdminPreviewMode && !secret) {
+        var secretInput = document.getElementById('companyCreateAdminSecret');
+        secret = secretInput ? String(secretInput.value || '').trim() : '';
+      }
+      if (!secret) {
+        alert('관리자 암호를 입력해 주세요.');
+        return;
+      }
+      if (!window.confirm(name + ' 업체를 선택한 ' + branchIds.length + '개 지사에 등록하시겠습니까?')) return;
+
+      setCompanyCreateSaveBusy(true);
+      try {
+        var sb = getSupabase();
+        var inv = await sb.functions.invoke('admin-manage-public-settings', {
+          body: {
+            action: 'company_create',
+            admin_secret: secret,
+            name: name,
+            business_registration_no: brn,
+            representative_name: representative,
+            address: address,
+            branch_ids: branchIds
+          }
+        });
+        if (inv.error) throw new Error(await formatEdgeInvokeError(inv.error));
+        if (!inv.data || !inv.data.ok) {
+          throw new Error(inv.data && inv.data.error ? inv.data.error : '업체 등록에 실패했습니다.');
+        }
+        if (localAdminPreviewMode) adminNotifySecretSession = secret;
+        var modalEl = document.getElementById('companyCreateModal');
+        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        await refreshCompaniesRegistry();
+        alert('신규 업체를 등록했습니다. 이제 해당 사업자번호로 회원가입할 수 있습니다.');
+      } catch (e) {
+        alert('업체 등록 오류: ' + (e.message || e));
+      } finally {
+        setCompanyCreateSaveBusy(false);
+      }
+    }
+
     async function saveCompanyBranchChange() {
       if (!companyBranchModalState || companyBranchSaveBusy) return;
       var group = getCompanyRegistryGroupByKey(companyBranchModalState.companyKey);
@@ -2883,6 +3049,21 @@
         refreshCompaniesRegistry();
       });
     }
+    var btnCompanyCreateOpen = document.getElementById('btnCompanyCreateOpen');
+    if (btnCompanyCreateOpen) {
+      btnCompanyCreateOpen.addEventListener('click', async function () {
+        await ensureCompaniesRegistryLoaded();
+        if (companiesRegistryLoaded) openCompanyCreateModal();
+      });
+    }
+    var companyCreateBrnInput = document.getElementById('companyCreateBrn');
+    if (companyCreateBrnInput) {
+      companyCreateBrnInput.addEventListener('input', function () {
+        companyCreateBrnInput.value = formatCompanyCreateBrn(companyCreateBrnInput.value);
+      });
+    }
+    var btnCompanyCreateSave = document.getElementById('btnCompanyCreateSave');
+    if (btnCompanyCreateSave) btnCompanyCreateSave.addEventListener('click', saveCompanyCreate);
     var btnCompanyBranchSave = document.getElementById('btnCompanyBranchPreviewSave');
     if (btnCompanyBranchSave) {
       btnCompanyBranchSave.addEventListener('click', saveCompanyBranchChange);

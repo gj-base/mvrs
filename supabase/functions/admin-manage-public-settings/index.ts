@@ -131,6 +131,80 @@ Deno.serve(async (req: Request) => {
   });
 
   try {
+    if (action === "company_create") {
+      const name = str(body.name).slice(0, 200);
+      const businessRegistrationNo = normalizeBusinessRegistrationNo(body.business_registration_no);
+      const representativeName = str(body.representative_name).slice(0, 100) || null;
+      const address = str(body.address).slice(0, 500) || null;
+      const rawBranchIds = Array.isArray(body.branch_ids) ? body.branch_ids : [];
+      const branchIds = Array.from(new Set(rawBranchIds.map(positiveBigint).filter((id): id is number => id !== null)));
+      if (!name) {
+        return json(400, { ok: false, error: "업체명을 입력해 주세요." });
+      }
+      if (businessRegistrationNo.length !== 10) {
+        return json(400, { ok: false, error: "사업자번호는 숫자 10자리여야 합니다." });
+      }
+      if (!branchIds.length || branchIds.length !== rawBranchIds.length || branchIds.length > 100) {
+        return json(400, { ok: false, error: "활성 지사를 한 곳 이상 올바르게 선택해 주세요." });
+      }
+
+      const [{ data: branches, error: branchesErr }, { data: allCompanies, error: companiesErr }] =
+        await Promise.all([
+          sb.from("branches").select("id,name,is_active").in("id", branchIds),
+          sb.from("companies").select("id,branch_id,name,business_registration_no,is_active").limit(5000),
+        ]);
+      if (branchesErr) throw branchesErr;
+      if (companiesErr) throw companiesErr;
+
+      const activeBranchIds = new Set(
+        (branches ?? []).filter((branch) => branch.is_active !== false).map((branch) => Number(branch.id)),
+      );
+      if (branchIds.some((branchId) => !activeBranchIds.has(branchId))) {
+        return json(400, { ok: false, error: "선택한 지사 중 사용할 수 없는 지사가 있습니다." });
+      }
+
+      const existingBrnRow = (allCompanies ?? []).find((row) =>
+        normalizeBusinessRegistrationNo(row.business_registration_no) === businessRegistrationNo
+      );
+      if (existingBrnRow) {
+        return json(409, {
+          ok: false,
+          error: `이미 등록된 사업자번호입니다. 기존 업체 “${str(existingBrnRow.name)}”에서 지사를 추가해 주세요.`,
+          existing_company_id: existingBrnRow.id,
+        });
+      }
+      const duplicateNameRow = (allCompanies ?? []).find((row) =>
+        branchIds.includes(Number(row.branch_id)) && str(row.name) === name
+      );
+      if (duplicateNameRow) {
+        return json(409, { ok: false, error: "선택한 지사에 같은 업체명이 이미 등록되어 있습니다." });
+      }
+
+      const now = new Date().toISOString();
+      const formattedBrn = `${businessRegistrationNo.slice(0, 3)}-${businessRegistrationNo.slice(3, 5)}-${businessRegistrationNo.slice(5)}`;
+      const rows = branchIds.map((branchId) => ({
+        branch_id: branchId,
+        name,
+        business_registration_no: formattedBrn,
+        representative_name: representativeName,
+        address,
+        sort_order: 0,
+        is_active: true,
+        updated_at: now,
+      }));
+      const { data: inserted, error: insertErr } = await sb
+        .from("companies")
+        .insert(rows)
+        .select("id,branch_id,name,business_registration_no,is_active");
+      if (insertErr) {
+        if (insertErr.code === "23505") {
+          return json(409, { ok: false, error: "같은 업체가 이미 등록되어 있습니다. 목록을 새로고침해 주세요." });
+        }
+        throw insertErr;
+      }
+      return json(200, { ok: true, companies: inserted ?? [] });
+    }
+
     if (action === "company_branch_add") {
       const sourceCompanyId = positiveBigint(body.source_company_id);
       const branchId = positiveBigint(body.branch_id);
