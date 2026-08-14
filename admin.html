@@ -609,17 +609,17 @@
                   <option value="inactive">비활성만</option>
                 </select>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-6">
                 <label class="form-label small text-muted mb-0">검색 (업체명·사업자번호·대표자·주소)</label>
                 <input type="search" class="form-control form-control-sm" id="companyRegistrySearchInput" placeholder="입력 시 목록 필터" autocomplete="off">
-              </div>
-              <div class="col-md-2 text-md-end">
-                <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" id="btnCompanyRegistryRefresh">목록 새로고침</button>
               </div>
             </div>
             <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-2">
               <p class="small text-muted mb-0" id="companiesRegistryHint">목록을 불러오려면 이 메뉴를 선택하세요.</p>
-              <button type="button" class="btn btn-sm btn-outline-primary fw-semibold flex-shrink-0" id="btnCompanyCreateOpen">＋ 신규 업체 등록</button>
+              <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" id="btnCompanyRegistryRefresh">새로고침</button>
+                <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" id="btnCompanyCreateOpen">＋ 신규 업체 등록</button>
+              </div>
             </div>
             <div class="table-responsive border rounded-2" style="max-height:min(62vh, 560px)">
               <table class="table table-sm table-hover align-middle mb-0" id="companiesRegistryTable">
