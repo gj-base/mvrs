@@ -594,9 +594,6 @@
         </div>
         <div class="card border-0 shadow-sm rounded-3 admin-companies-wrap">
           <div class="card-body p-4">
-            <div class="d-flex justify-content-end mb-3">
-              <button type="button" class="btn btn-sm btn-primary fw-semibold" id="btnCompanyCreateOpen">＋ 신규 업체 등록</button>
-            </div>
             <div class="row g-2 align-items-end flex-wrap mb-3">
               <div class="col-sm-6 col-md-3">
                 <label class="form-label small text-muted mb-0">지사</label>
@@ -620,7 +617,10 @@
                 <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" id="btnCompanyRegistryRefresh">목록 새로고침</button>
               </div>
             </div>
-            <p class="small text-muted mb-2" id="companiesRegistryHint">목록을 불러오려면 이 메뉴를 선택하세요.</p>
+            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-2">
+              <p class="small text-muted mb-0" id="companiesRegistryHint">목록을 불러오려면 이 메뉴를 선택하세요.</p>
+              <button type="button" class="btn btn-sm btn-outline-primary fw-semibold flex-shrink-0" id="btnCompanyCreateOpen">＋ 신규 업체 등록</button>
+            </div>
             <div class="table-responsive border rounded-2" style="max-height:min(62vh, 560px)">
               <table class="table table-sm table-hover align-middle mb-0" id="companiesRegistryTable">
                 <thead class="table-light sticky-top">
@@ -692,19 +692,19 @@
             </div>
             <div class="modal-body">
               <div class="row g-3">
-                <div class="col-md-7">
+                <div class="col-12">
                   <label class="form-label fw-semibold" for="companyCreateName">업체명 <span class="text-danger">*</span></label>
                   <input type="text" class="form-control" id="companyCreateName" maxlength="200" autocomplete="organization" placeholder="사업자등록증의 업체명을 입력하세요.">
                 </div>
-                <div class="col-md-5">
+                <div class="col-12">
                   <label class="form-label fw-semibold" for="companyCreateBrn">사업자번호 <span class="text-danger">*</span></label>
                   <input type="text" inputmode="numeric" class="form-control" id="companyCreateBrn" maxlength="12" autocomplete="off" placeholder="000-00-00000">
                 </div>
-                <div class="col-md-4">
+                <div class="col-12">
                   <label class="form-label fw-semibold" for="companyCreateRepresentative">대표자</label>
                   <input type="text" class="form-control" id="companyCreateRepresentative" maxlength="100" autocomplete="name">
                 </div>
-                <div class="col-md-8">
+                <div class="col-12">
                   <label class="form-label fw-semibold" for="companyCreateAddress">주소</label>
                   <input type="text" class="form-control" id="companyCreateAddress" maxlength="500" autocomplete="street-address">
                 </div>
