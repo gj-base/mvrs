@@ -58,6 +58,21 @@
       display: flex;
       flex-direction: row;
     }
+    .local-admin-preview-banner {
+      position: fixed;
+      top: 82px;
+      right: 20px;
+      z-index: 1100;
+      max-width: min(520px, calc(100vw - 40px));
+      padding: 10px 14px;
+      border: 1px solid #f0c36d;
+      border-radius: 10px;
+      background: #fff8e6;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      color: #6b4b00;
+      font-size: 13px;
+      font-weight: 600;
+    }
     .admin-sidebar {
       flex: 0 0 228px;
       background: #fff;
@@ -137,6 +152,109 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+    .company-registry-preview-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      color: #344054;
+      background: #f5f9ff;
+      border: 1px solid #cfe1f7;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .company-registry-preview-note .preview-badge {
+      flex: 0 0 auto;
+      padding: 3px 8px;
+      color: #fff;
+      background: var(--kepco-blue);
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+    .company-branch-list {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      min-width: 15rem;
+    }
+    .company-branch-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 27px;
+      padding: 4px 9px;
+      color: #164c7e;
+      background: #edf6ff;
+      border: 1px solid #b8d8f5;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    button.company-branch-chip {
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    button.company-branch-chip:hover {
+      background: #deefff;
+      border-color: #7db8e8;
+    }
+    button.company-branch-chip:active { transform: scale(0.97); }
+    .company-branch-chip .branch-remove-mark {
+      color: #667085;
+      font-size: 0.9rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .company-branch-chip.is-inactive {
+      color: #667085;
+      background: #f2f4f7;
+      border-color: #d0d5dd;
+      text-decoration: line-through;
+    }
+    .btn-company-branch-add {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 27px;
+      padding: 4px 9px;
+      color: var(--kepco-blue);
+      background: #fff;
+      border: 1px dashed #78a9d4;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .btn-company-branch-add:hover {
+      color: #00366f;
+      background: #f5f9ff;
+      border-color: var(--kepco-blue);
+    }
+    .company-manage-col {
+      width: 1%;
+      white-space: nowrap;
+    }
+    .company-branch-modal-summary {
+      padding: 12px 14px;
+      color: #344054;
+      background: #f8fafc;
+      border: 1px solid #e4e7ec;
+      border-radius: 10px;
+      font-size: 0.86rem;
+      line-height: 1.55;
+    }
+    .company-branch-modal-current {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
     }
     @media (min-width: 1200px) {
       .admin-companies-wrap .cell-truncate-wide { max-width: 22rem; }
@@ -472,10 +590,14 @@
       <section id="admin-panel-companies" class="admin-panel" aria-labelledby="admin-panel-companies-title">
         <div class="admin-panel-head">
           <h2 id="admin-panel-companies-title">업체 현황</h2>
-          <p>예약 시 선택 가능한 DB 업체의 등록·활성 상태를 조회합니다. (조회 전용)</p>
+          <p>업체별 환입 가능 지사를 한눈에 확인하고 관리합니다.</p>
         </div>
         <div class="card border-0 shadow-sm rounded-3 admin-companies-wrap">
           <div class="card-body p-4">
+            <div class="company-registry-preview-note" role="note">
+              <span class="preview-badge">지사 관리</span>
+              <span>업체를 사업자번호 기준으로 묶어 표시합니다. 지사 추가 시 기존 회원 멤버십이 자동 연결되고, 해제 시 해당 지사의 멤버십만 제거됩니다.</span>
+            </div>
             <div class="row g-2 align-items-end flex-wrap mb-3">
               <div class="col-sm-6 col-md-3">
                 <label class="form-label small text-muted mb-0">지사</label>
@@ -505,12 +627,12 @@
                 <thead class="table-light sticky-top">
                   <tr>
                     <th class="text-nowrap">순번</th>
-                    <th class="text-nowrap">지사</th>
                     <th>업체명</th>
                     <th class="text-nowrap">사업자번호</th>
                     <th>대표자</th>
                     <th>주소</th>
-                    <th class="text-nowrap">상태</th>
+                    <th class="text-nowrap">환입 가능 지사</th>
+                    <th class="text-nowrap company-manage-col text-center">관리</th>
                   </tr>
                 </thead>
                 <tbody id="companiesRegistryTableBody"></tbody>
@@ -519,6 +641,45 @@
           </div>
         </div>
       </section>
+
+      <div class="modal fade" id="companyBranchManageModal" tabindex="-1" aria-labelledby="companyBranchManageModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+              <div>
+                <div class="small text-primary fw-bold mb-1" id="companyBranchManageModalMode">지사 관리</div>
+                <h5 class="modal-title fw-bold" id="companyBranchManageModalTitle">업체 지사 관리</h5>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <div class="small text-muted mb-2">현재 환입 가능 지사</div>
+                <div class="company-branch-modal-current" id="companyBranchModalCurrent"></div>
+              </div>
+              <div id="companyBranchAddFields" class="mb-3">
+                <label class="form-label fw-semibold" for="companyBranchSelect">추가할 지사</label>
+                <select class="form-select" id="companyBranchSelect"></select>
+                <div class="form-text">비활성 이력이 있는 지사를 선택하면 재활성화 대상으로 표시됩니다.</div>
+              </div>
+              <div id="companyBranchRemoveFields" class="alert alert-warning d-none mb-3" role="alert"></div>
+              <div id="companyBranchLocalAuthFields" class="mb-3 d-none">
+                <label class="form-label fw-semibold" for="companyBranchAdminSecret">관리자 암호</label>
+                <input type="password" class="form-control" id="companyBranchAdminSecret" autocomplete="current-password" placeholder="로컬 저장 시 관리자 암호를 입력하세요.">
+                <div class="form-text">등록된 관리자 공인 IP에서만 저장되며, 암호는 브라우저 메모리에만 유지됩니다.</div>
+              </div>
+              <div class="company-branch-modal-summary" id="companyBranchModalSummary">변경할 지사를 선택해 주세요.</div>
+              <div class="alert alert-light border small text-muted mt-3 mb-0">
+                저장 즉시 업체 현황과 해당 회원의 예약 가능 지사에 반영됩니다. 기존 예약 이력과 회원 계정은 유지됩니다.
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">닫기</button>
+              <button type="button" class="btn btn-primary" id="btnCompanyBranchPreviewSave" disabled>변경 저장</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <section id="admin-panel-signups" class="admin-panel" aria-labelledby="admin-panel-signups-title">
         <div class="admin-panel-head">
@@ -750,9 +911,16 @@
     var showRejectedReservations = false;
     /** 로그인 성공 후에만 설정됨. 브라우저 메모리에만 있으며 config.js에 없음 (ADMIN_NOTIFY_SECRET 과 동일 문자열) */
     var adminNotifySecretSession = null;
+    /** localhost/127.0.0.1 전용 조회·화면 미리보기. 운영 주소에서는 항상 false. */
+    var localAdminPreviewMode = false;
+    var adminDashboardInitialized = false;
     /** 업체 현황 패널용 (전체 행 캐시) */
     var companiesRegistryRaw = [];
+    var companiesRegistryBranches = [];
+    var companiesRegistryGrouped = [];
     var companiesRegistryLoaded = false;
+    var companyBranchModalState = null;
+    var companyBranchSaveBusy = false;
     var sitePopupsCache = [];
     /** 회원가입 현황 패널용 */
     var userSignupsRaw = [];
@@ -866,6 +1034,10 @@
 
     async function openAdminBookingView() {
       if (!currentEvent) return;
+      if (localAdminPreviewMode) {
+        alert('로컬 미리보기에서는 개인정보가 포함된 예약 상세 조회를 사용할 수 없습니다.');
+        return;
+      }
       try {
         await ensureReservationPiiDecrypted(currentEvent.id, currentEvent);
       } catch (e) {
@@ -1037,7 +1209,39 @@
       }
     }
 
+    function isLocalAdminHost() {
+      var host = String(window.location.hostname || '').toLowerCase();
+      return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]';
+    }
+
+    function showAdminDashboard() {
+      document.getElementById('adminPw').value = '';
+      document.getElementById('login-box').style.display = 'none';
+      document.getElementById('calendar-container').classList.add('admin-layout-visible');
+      if (adminDashboardInitialized) return;
+      adminDashboardInitialized = true;
+      initCalendar();
+      setAdminPanel('calendar');
+      loadAdminPublicSettingsPanel();
+    }
+
+    function enterLocalAdminPreview() {
+      if (!isLocalAdminHost()) return false;
+      localAdminPreviewMode = true;
+      adminNotifySecretSession = null;
+      if (!document.getElementById('localAdminPreviewBanner')) {
+        var banner = document.createElement('div');
+        banner.id = 'localAdminPreviewBanner';
+        banner.className = 'local-admin-preview-banner';
+        banner.textContent = '로컬 관리자 모드 · 등록된 공인 IP에서 업체 지사 추가·해제를 저장할 수 있습니다. 예약 변경과 개인정보 조회는 차단됩니다.';
+        document.body.appendChild(banner);
+      }
+      showAdminDashboard();
+      return true;
+    }
+
     async function attemptLogin() {
+      if (enterLocalAdminPreview()) return;
       const pw = (document.getElementById('adminPw').value || '').trim();
       if (!pw) {
         alert('암호를 입력해 주세요.');
@@ -1073,14 +1277,8 @@
           return;
         }
         adminNotifySecretSession = pw;
-        document.getElementById('adminPw').value = '';
-        document.getElementById('login-box').style.display = 'none';
-        var appEl = document.getElementById('calendar-container');
-        appEl.classList.add('admin-layout-visible');
         try {
-          initCalendar();
-          setAdminPanel('calendar');
-          loadAdminPublicSettingsPanel();
+          showAdminDashboard();
         } catch (e) {
           alert('캘린더 로드 오류: ' + (e.message || e));
         }
@@ -1518,12 +1716,13 @@
       ]);
       if (brRes.error) throw brRes.error;
       if (coRes.error) throw coRes.error;
+      companiesRegistryBranches = brRes.data || [];
       companiesRegistryRaw = coRes.data || [];
       var filt = document.getElementById('companyRegistryBranchFilter');
       if (filt) {
         var cur = filt.value;
         filt.innerHTML = '<option value="">전체 지사</option>';
-        (brRes.data || []).forEach(function (b) {
+        companiesRegistryBranches.forEach(function (b) {
           var o = document.createElement('option');
           o.value = String(b.id);
           o.textContent = b.name != null ? String(b.name) : String(b.id);
@@ -1538,6 +1737,79 @@
         }
         if (found) filt.value = cur;
       }
+      companiesRegistryGrouped = buildCompaniesRegistryGroups(companiesRegistryRaw);
+    }
+
+    function normalizeCompanyRegistryBrn(v) {
+      return v == null ? '' : String(v).replace(/[^0-9]/g, '');
+    }
+
+    function buildCompaniesRegistryGroups(rows) {
+      var byKey = {};
+      (rows || []).forEach(function (row) {
+        var brnDigits = normalizeCompanyRegistryBrn(row.business_registration_no);
+        var key = brnDigits.length === 10 ? 'brn:' + brnDigits : 'row:' + String(row.id);
+        if (!byKey[key]) {
+          byKey[key] = {
+            key: key,
+            name: row.name != null ? String(row.name) : '—',
+            business_registration_no: row.business_registration_no,
+            representative_name: row.representative_name,
+            address: row.address,
+            rows: []
+          };
+        }
+        var g = byKey[key];
+        g.rows.push(row);
+        if ((!g.name || g.name === '—') && row.name) g.name = String(row.name);
+        if (!g.business_registration_no && row.business_registration_no) g.business_registration_no = row.business_registration_no;
+        if (!g.representative_name && row.representative_name) g.representative_name = row.representative_name;
+        if (!g.address && row.address) g.address = row.address;
+      });
+      return Object.keys(byKey).map(function (key) { return byKey[key]; }).sort(function (a, b) {
+        return String(a.name).localeCompare(String(b.name), 'ko');
+      });
+    }
+
+    function getCompanyRegistryGroupByKey(key) {
+      for (var i = 0; i < companiesRegistryGrouped.length; i++) {
+        if (companiesRegistryGrouped[i].key === key) return companiesRegistryGrouped[i];
+      }
+      return null;
+    }
+
+    function getCompanyRegistryBranchRows(group) {
+      var byBranch = {};
+      (group && group.rows ? group.rows : []).forEach(function (row) {
+        var bid = String(row.branch_id);
+        var prev = byBranch[bid];
+        if (!prev || (prev.is_active === false && row.is_active !== false)) byBranch[bid] = row;
+      });
+      return Object.keys(byBranch).map(function (k) { return byBranch[k]; }).sort(function (a, b) {
+        var an = a.branches && a.branches.name ? String(a.branches.name) : '';
+        var bn = b.branches && b.branches.name ? String(b.branches.name) : '';
+        return an.localeCompare(bn, 'ko');
+      });
+    }
+
+    function companyRegistryGroupMatches(group, branchVal, statusVal, q) {
+      var relevantRows = (group.rows || []).filter(function (row) {
+        if (branchVal && String(row.branch_id) !== branchVal) return false;
+        if (statusVal === 'active' && row.is_active === false) return false;
+        if (statusVal === 'inactive' && row.is_active !== false) return false;
+        return true;
+      });
+      if (!relevantRows.length) return false;
+      if (!q) return true;
+      var parts = [group.name, group.business_registration_no, group.representative_name, group.address];
+      (group.rows || []).forEach(function (row) {
+        parts.push(row.name);
+        parts.push(row.branches && row.branches.name);
+      });
+      var hay = parts.map(function (x) {
+        return x != null ? String(x).toLowerCase() : '';
+      }).join(' ');
+      return hay.indexOf(q) !== -1;
     }
 
     function renderCompaniesRegistryTable() {
@@ -1551,55 +1823,46 @@
       var statusVal = stEl && stEl.value ? stEl.value : 'all';
       var q = qEl && qEl.value ? String(qEl.value).trim().toLowerCase() : '';
 
-      var rows = companiesRegistryRaw.filter(function (row) {
-        if (branchVal && String(row.branch_id) !== branchVal) return false;
-        if (statusVal === 'active' && row.is_active === false) return false;
-        if (statusVal === 'inactive' && row.is_active !== false) return false;
-        if (!q) return true;
-        var parts = [
-          row.name,
-          row.business_registration_no,
-          row.representative_name,
-          row.address,
-          row.branches && row.branches.name
-        ];
-        var hay = parts
-          .map(function (x) {
-            return x != null ? String(x).toLowerCase() : '';
-          })
-          .join(' ');
-        return hay.indexOf(q) !== -1;
+      var groups = companiesRegistryGrouped.filter(function (group) {
+        return companyRegistryGroupMatches(group, branchVal, statusVal, q);
       });
 
       tb.innerHTML = '';
       if (hint) {
         hint.textContent =
-          '전체 ' + companiesRegistryRaw.length + '건 · 조건에 맞게 표시 ' + rows.length + '건';
+          '업체 ' + companiesRegistryGrouped.length + '개 · 지사 연결 ' + companiesRegistryRaw.length + '건 · 조건에 맞게 표시 ' + groups.length + '개';
       }
-      if (!rows.length) {
+      if (!groups.length) {
         var tr0 = document.createElement('tr');
         tr0.innerHTML =
           '<td colspan="7" class="text-muted small text-center py-4">조건에 맞는 업체가 없습니다.</td>';
         tb.appendChild(tr0);
         return;
       }
-      rows.forEach(function (row, idx) {
+      groups.forEach(function (group, idx) {
         var tr = document.createElement('tr');
-        var bnm = row.branches && row.branches.name ? String(row.branches.name) : '#' + row.branch_id;
-        var stHtml =
-          row.is_active === false
-            ? '<span class="badge bg-secondary">비활성</span>'
-            : '<span class="badge" style="background:#004795">활성</span>';
-        var brn = row.business_registration_no != null ? String(row.business_registration_no) : '—';
-        var rep = row.representative_name != null ? String(row.representative_name) : '—';
-        var addr = row.address != null ? String(row.address) : '—';
-        var nm = row.name != null ? String(row.name) : '—';
+        var branchRows = getCompanyRegistryBranchRows(group).filter(function (row) {
+          if (statusVal === 'active') return row.is_active !== false;
+          if (statusVal === 'inactive') return row.is_active === false;
+          return true;
+        });
+        var branchesHtml = branchRows.map(function (row) {
+          var bnm = row.branches && row.branches.name ? String(row.branches.name) : '#' + row.branch_id;
+          if (row.is_active === false) {
+            return '<span class="company-branch-chip is-inactive" title="비활성 지사">' + escapeHtml(bnm) + '</span>';
+          }
+          return '<button type="button" class="company-branch-chip btn-company-branch-remove-preview" data-company-key="' +
+            escapeAttr(group.key) + '" data-row-id="' + escapeAttr(String(row.id)) + '" title="' + escapeAttr(bnm + ' 지사 해제 화면 보기') + '">' +
+            escapeHtml(bnm) + '<span class="branch-remove-mark" aria-hidden="true">×</span></button>';
+        }).join('');
+        if (!branchesHtml) branchesHtml = '<span class="text-muted small">표시할 지사가 없습니다.</span>';
+        var brn = group.business_registration_no != null ? String(group.business_registration_no) : '—';
+        var rep = group.representative_name != null ? String(group.representative_name) : '—';
+        var addr = group.address != null ? String(group.address) : '—';
+        var nm = group.name != null ? String(group.name) : '—';
         tr.innerHTML =
           '<td class="text-muted small text-nowrap">' +
           escapeHtml(String(idx + 1)) +
-          '</td>' +
-          '<td class="text-nowrap">' +
-          escapeHtml(bnm) +
           '</td>' +
           '<td class="fw-semibold">' +
           escapeHtml(nm) +
@@ -1617,11 +1880,165 @@
           '">' +
           escapeHtml(addr) +
           '</span></td>' +
-          '<td class="text-nowrap">' +
-          stHtml +
-          '</td>';
+          '<td><div class="company-branch-list">' + branchesHtml + '</div></td>' +
+          '<td class="text-center company-manage-col"><button type="button" class="btn-company-branch-add btn-company-branch-add-preview" data-company-key="' +
+          escapeAttr(group.key) + '"><span aria-hidden="true">＋</span> 지사 추가</button></td>';
         tb.appendChild(tr);
       });
+    }
+
+    function renderCompanyBranchModalCurrent(group) {
+      var box = document.getElementById('companyBranchModalCurrent');
+      if (!box) return;
+      var activeRows = getCompanyRegistryBranchRows(group).filter(function (row) { return row.is_active !== false; });
+      box.innerHTML = activeRows.length ? activeRows.map(function (row) {
+        var name = row.branches && row.branches.name ? row.branches.name : '#' + row.branch_id;
+        return '<span class="company-branch-chip">' + escapeHtml(name) + '</span>';
+      }).join('') : '<span class="text-muted small">활성 지사가 없습니다.</span>';
+    }
+
+    function updateCompanyBranchAddPreview(group) {
+      var sel = document.getElementById('companyBranchSelect');
+      var summary = document.getElementById('companyBranchModalSummary');
+      var saveBtn = document.getElementById('btnCompanyBranchPreviewSave');
+      if (!sel || !summary || !group) return;
+      var opt = sel.options[sel.selectedIndex];
+      if (!opt || !opt.value) {
+        summary.textContent = '추가할 지사를 선택해 주세요.';
+        if (saveBtn) saveBtn.disabled = true;
+        return;
+      }
+      var suffix = opt.getAttribute('data-reactivate') === 'true' ? '의 기존 비활성 행을 재활성화합니다.' : '에 업체 행을 추가하고 기존 회원 멤버십을 연결합니다.';
+      summary.innerHTML = '<strong>' + escapeHtml(group.name) + '</strong> 업체를 <strong>' + escapeHtml(opt.textContent.replace(' (재활성화)', '')) + '</strong> 지사' + suffix;
+      if (saveBtn) saveBtn.disabled = companyBranchSaveBusy;
+    }
+
+    function openCompanyBranchPreview(mode, companyKey, rowId) {
+      var group = getCompanyRegistryGroupByKey(companyKey);
+      var modalEl = document.getElementById('companyBranchManageModal');
+      if (!group || !modalEl) return;
+      var title = document.getElementById('companyBranchManageModalTitle');
+      var modeEl = document.getElementById('companyBranchManageModalMode');
+      var addFields = document.getElementById('companyBranchAddFields');
+      var removeFields = document.getElementById('companyBranchRemoveFields');
+      var summary = document.getElementById('companyBranchModalSummary');
+      var saveBtn = document.getElementById('btnCompanyBranchPreviewSave');
+      var localAuthFields = document.getElementById('companyBranchLocalAuthFields');
+      var localSecretInput = document.getElementById('companyBranchAdminSecret');
+      companyBranchModalState = { mode: mode, companyKey: companyKey, rowId: rowId };
+      if (localAuthFields) localAuthFields.classList.toggle('d-none', !localAdminPreviewMode || !!adminNotifySecretSession);
+      if (localSecretInput) localSecretInput.value = '';
+      if (title) title.textContent = group.name;
+      renderCompanyBranchModalCurrent(group);
+      if (mode === 'remove') {
+        if (modeEl) modeEl.textContent = '지사 해제';
+        if (addFields) addFields.classList.add('d-none');
+        if (removeFields) removeFields.classList.remove('d-none');
+        var target = null;
+        (group.rows || []).forEach(function (row) { if (String(row.id) === String(rowId)) target = row; });
+        var branchName = target && target.branches && target.branches.name ? String(target.branches.name) : '선택 지사';
+        if (removeFields) removeFields.innerHTML = '<strong>' + escapeHtml(branchName) + '</strong> 지사를 해제하면 이 지사에서는 신규 예약을 할 수 없게 됩니다. 회원 계정과 예약 이력은 유지됩니다.';
+        if (summary) summary.innerHTML = '<strong>' + escapeHtml(group.name) + '</strong>의 <strong>' + escapeHtml(branchName) + '</strong> 지사 연결을 비활성화하고 해당 멤버십을 해제합니다.';
+        if (saveBtn) saveBtn.disabled = !target || companyBranchSaveBusy;
+      } else {
+        if (modeEl) modeEl.textContent = '지사 추가';
+        if (addFields) addFields.classList.remove('d-none');
+        if (removeFields) removeFields.classList.add('d-none');
+        var sel = document.getElementById('companyBranchSelect');
+        var branchRows = getCompanyRegistryBranchRows(group);
+        var activeMap = {};
+        var inactiveMap = {};
+        branchRows.forEach(function (row) {
+          if (row.is_active === false) inactiveMap[String(row.branch_id)] = true;
+          else activeMap[String(row.branch_id)] = true;
+        });
+        if (sel) {
+          sel.innerHTML = '<option value="">지사를 선택하세요.</option>';
+          companiesRegistryBranches.forEach(function (branch) {
+            var bid = String(branch.id);
+            if (activeMap[bid]) return;
+            var o = document.createElement('option');
+            o.value = bid;
+            o.textContent = String(branch.name) + (inactiveMap[bid] ? ' (재활성화)' : '');
+            o.setAttribute('data-reactivate', inactiveMap[bid] ? 'true' : 'false');
+            sel.appendChild(o);
+          });
+          sel.onchange = function () { updateCompanyBranchAddPreview(group); };
+        }
+        updateCompanyBranchAddPreview(group);
+      }
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    function setCompanyBranchSaveBusy(on) {
+      companyBranchSaveBusy = !!on;
+      var saveBtn = document.getElementById('btnCompanyBranchPreviewSave');
+      if (!saveBtn) return;
+      saveBtn.disabled = !!on;
+      saveBtn.textContent = on ? '저장 중…' : '변경 저장';
+    }
+
+    async function saveCompanyBranchChange() {
+      if (!companyBranchModalState || companyBranchSaveBusy) return;
+      var group = getCompanyRegistryGroupByKey(companyBranchModalState.companyKey);
+      if (!group) {
+        alert('업체 정보를 다시 불러온 뒤 시도해 주세요.');
+        return;
+      }
+      var secret = adminNotifySecretSession;
+      if (localAdminPreviewMode && !secret) {
+        var secretInput = document.getElementById('companyBranchAdminSecret');
+        secret = secretInput ? String(secretInput.value || '').trim() : '';
+      }
+      if (!secret) {
+        alert('관리자 암호를 입력해 주세요.');
+        return;
+      }
+
+      var body = { admin_secret: secret };
+      var confirmMessage = '';
+      if (companyBranchModalState.mode === 'remove') {
+        body.action = 'company_branch_remove';
+        body.company_id = companyBranchModalState.rowId;
+        confirmMessage = group.name + '의 선택 지사를 해제하시겠습니까?';
+      } else {
+        var sel = document.getElementById('companyBranchSelect');
+        var branchId = sel ? String(sel.value || '') : '';
+        if (!branchId) {
+          alert('추가할 지사를 선택해 주세요.');
+          return;
+        }
+        var source = (group.rows || []).find(function (row) { return row.is_active !== false; }) || (group.rows || [])[0];
+        if (!source) {
+          alert('기준 업체 행을 찾을 수 없습니다.');
+          return;
+        }
+        body.action = 'company_branch_add';
+        body.source_company_id = source.id;
+        body.branch_id = branchId;
+        confirmMessage = group.name + '에 선택한 지사를 추가하시겠습니까?';
+      }
+      if (!window.confirm(confirmMessage)) return;
+
+      setCompanyBranchSaveBusy(true);
+      try {
+        var sb = getSupabase();
+        var inv = await sb.functions.invoke('admin-manage-public-settings', { body: body });
+        if (inv.error) throw new Error(await formatEdgeInvokeError(inv.error));
+        if (!inv.data || !inv.data.ok) {
+          throw new Error(inv.data && inv.data.error ? inv.data.error : '지사 변경에 실패했습니다.');
+        }
+        if (localAdminPreviewMode) adminNotifySecretSession = secret;
+        var modalEl = document.getElementById('companyBranchManageModal');
+        if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        await refreshCompaniesRegistry();
+        if (!localAdminPreviewMode && userSignupsLoaded) await refreshUserSignups();
+        alert(companyBranchModalState.mode === 'remove' ? '지사를 해제했습니다.' : '지사를 추가했습니다.');
+      } catch (e) {
+        alert('지사 변경 오류: ' + (e.message || e));
+      } finally {
+        setCompanyBranchSaveBusy(false);
+      }
     }
 
     async function ensureCompaniesRegistryLoaded() {
@@ -2292,6 +2709,10 @@
     }
 
     async function updateReservationStatus(newStatus, confirmText) {
+      if (localAdminPreviewMode) {
+        alert('로컬 미리보기에서는 예약 상태를 변경할 수 없습니다.');
+        return;
+      }
       if (!currentEvent) return;
       if (!window.confirm(confirmText)) return;
 
@@ -2405,6 +2826,14 @@
       if (e.key === 'Enter') attemptLogin();
     });
 
+    if (isLocalAdminHost()) {
+      try {
+        enterLocalAdminPreview();
+      } catch (e) {
+        alert('로컬 미리보기 로드 오류: ' + (e.message || e));
+      }
+    }
+
     document.getElementById('btnApprove').addEventListener('click', function () {
       updateReservationStatus('승인', '이 예약을 승인하시겠습니까?');
     });
@@ -2456,6 +2885,24 @@
     if (btnCoRef) {
       btnCoRef.addEventListener('click', function () {
         refreshCompaniesRegistry();
+      });
+    }
+    var btnCompanyBranchSave = document.getElementById('btnCompanyBranchPreviewSave');
+    if (btnCompanyBranchSave) {
+      btnCompanyBranchSave.addEventListener('click', saveCompanyBranchChange);
+    }
+    var companyRegistryTb = document.getElementById('companiesRegistryTableBody');
+    if (companyRegistryTb) {
+      companyRegistryTb.addEventListener('click', function (ev) {
+        var addBtn = ev.target && ev.target.closest ? ev.target.closest('.btn-company-branch-add-preview') : null;
+        if (addBtn) {
+          openCompanyBranchPreview('add', addBtn.getAttribute('data-company-key'), null);
+          return;
+        }
+        var removeBtn = ev.target && ev.target.closest ? ev.target.closest('.btn-company-branch-remove-preview') : null;
+        if (removeBtn) {
+          openCompanyBranchPreview('remove', removeBtn.getAttribute('data-company-key'), removeBtn.getAttribute('data-row-id'));
+        }
       });
     }
 

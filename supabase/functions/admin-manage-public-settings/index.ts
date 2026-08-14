@@ -31,6 +31,15 @@ function str(v: unknown): string {
   return String(v).trim();
 }
 
+function positiveBigint(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+function normalizeBusinessRegistrationNo(v: unknown): string {
+  return str(v).replace(/[^0-9]/g, "");
+}
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -109,18 +118,192 @@ Deno.serve(async (req: Request) => {
     return json(401, { ok: false, error: "Unauthorized" });
   }
 
+  const action = str(body.action);
+
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   if (!serviceKey || !supabaseUrl) {
     return json(503, { ok: false, error: "Server misconfigured" });
   }
 
-  const action = str(body.action);
   const sb = createClient(supabaseUrl, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
   try {
+    if (action === "company_branch_add") {
+      const sourceCompanyId = positiveBigint(body.source_company_id);
+      const branchId = positiveBigint(body.branch_id);
+      if (!sourceCompanyId || !branchId) {
+        return json(400, { ok: false, error: "source_company_id와 branch_id가 필요합니다." });
+      }
+
+      const [{ data: source, error: sourceErr }, { data: branch, error: branchErr }] =
+        await Promise.all([
+          sb
+            .from("companies")
+            .select("id,branch_id,name,business_registration_no,representative_name,address,is_active,sort_order")
+            .eq("id", sourceCompanyId)
+            .maybeSingle(),
+          sb.from("branches").select("id,name,is_active").eq("id", branchId).maybeSingle(),
+        ]);
+      if (sourceErr) throw sourceErr;
+      if (branchErr) throw branchErr;
+      if (!source) return json(404, { ok: false, error: "기준 업체를 찾을 수 없습니다." });
+      if (!branch || branch.is_active === false) {
+        return json(400, { ok: false, error: "활성 지사를 선택해 주세요." });
+      }
+
+      const { data: allCompanies, error: companiesErr } = await sb
+        .from("companies")
+        .select("id,branch_id,name,business_registration_no,representative_name,address,is_active,sort_order")
+        .limit(5000);
+      if (companiesErr) throw companiesErr;
+
+      const sourceBrn = normalizeBusinessRegistrationNo(source.business_registration_no);
+      const groupRows = (allCompanies ?? []).filter((row) => {
+        if (sourceBrn.length === 10) {
+          return normalizeBusinessRegistrationNo(row.business_registration_no) === sourceBrn;
+        }
+        return Number(row.id) === sourceCompanyId;
+      });
+      const targetRows = groupRows.filter((row) => Number(row.branch_id) === branchId);
+      if (targetRows.some((row) => row.is_active !== false)) {
+        return json(409, { ok: false, error: "이미 활성화된 지사입니다." });
+      }
+
+      const groupCompanyIds = groupRows.map((row) => Number(row.id)).filter(Number.isSafeInteger);
+      const { data: memberships, error: membershipsErr } = groupCompanyIds.length
+        ? await sb
+          .from("user_company_memberships")
+          .select("user_id,company_id")
+          .in("company_id", groupCompanyIds)
+        : { data: [], error: null };
+      if (membershipsErr) throw membershipsErr;
+      const memberUserIds = Array.from(
+        new Set((memberships ?? []).map((row) => str(row.user_id)).filter(Boolean)),
+      );
+      if (memberUserIds.length > 1) {
+        return json(409, {
+          ok: false,
+          error: "동일 사업자번호에 서로 다른 회원이 연결되어 있어 자동 처리할 수 없습니다.",
+        });
+      }
+
+      const now = new Date().toISOString();
+      const inactiveTarget = targetRows.find((row) => row.is_active === false) ?? null;
+      let targetCompany: { id: number; branch_id: number; name: string; is_active: boolean } | null = null;
+      let created = false;
+      if (inactiveTarget) {
+        const { data: activated, error: activateErr } = await sb
+          .from("companies")
+          .update({
+            is_active: true,
+            business_registration_no: source.business_registration_no,
+            representative_name: source.representative_name,
+            address: source.address,
+            updated_at: now,
+          })
+          .eq("id", inactiveTarget.id)
+          .eq("is_active", false)
+          .select("id,branch_id,name,is_active")
+          .single();
+        if (activateErr) throw activateErr;
+        targetCompany = activated;
+      } else {
+        const { data: inserted, error: insertErr } = await sb
+          .from("companies")
+          .insert({
+            branch_id: branchId,
+            name: source.name,
+            business_registration_no: source.business_registration_no,
+            representative_name: source.representative_name,
+            address: source.address,
+            sort_order: source.sort_order ?? 0,
+            is_active: true,
+            updated_at: now,
+          })
+          .select("id,branch_id,name,is_active")
+          .single();
+        if (insertErr) {
+          if (insertErr.code === "23505") {
+            return json(409, { ok: false, error: "선택한 지사에 같은 업체명이 이미 존재합니다." });
+          }
+          throw insertErr;
+        }
+        targetCompany = inserted;
+        created = true;
+      }
+
+      if (memberUserIds.length === 1 && targetCompany) {
+        const { error: memberInsertErr } = await sb
+          .from("user_company_memberships")
+          .upsert(
+            { user_id: memberUserIds[0], company_id: targetCompany.id },
+            { onConflict: "user_id,company_id", ignoreDuplicates: true },
+          );
+        if (memberInsertErr) {
+          if (created) {
+            await sb.from("companies").delete().eq("id", targetCompany.id);
+          } else {
+            await sb
+              .from("companies")
+              .update({ is_active: false, updated_at: new Date().toISOString() })
+              .eq("id", targetCompany.id);
+          }
+          throw memberInsertErr;
+        }
+      }
+
+      return json(200, {
+        ok: true,
+        action: created ? "created" : "reactivated",
+        company: targetCompany,
+        membership_linked: memberUserIds.length === 1,
+      });
+    }
+
+    if (action === "company_branch_remove") {
+      const companyId = positiveBigint(body.company_id);
+      if (!companyId) {
+        return json(400, { ok: false, error: "company_id가 필요합니다." });
+      }
+      const { data: company, error: companyErr } = await sb
+        .from("companies")
+        .select("id,branch_id,name,is_active")
+        .eq("id", companyId)
+        .maybeSingle();
+      if (companyErr) throw companyErr;
+      if (!company) return json(404, { ok: false, error: "업체 지사 행을 찾을 수 없습니다." });
+      if (company.is_active === false) {
+        return json(409, { ok: false, error: "이미 비활성화된 지사입니다." });
+      }
+
+      const now = new Date().toISOString();
+      const { data: disabled, error: disableErr } = await sb
+        .from("companies")
+        .update({ is_active: false, updated_at: now })
+        .eq("id", companyId)
+        .eq("is_active", true)
+        .select("id,branch_id,name,is_active")
+        .single();
+      if (disableErr) throw disableErr;
+
+      const { error: membershipDeleteErr } = await sb
+        .from("user_company_memberships")
+        .delete()
+        .eq("company_id", companyId);
+      if (membershipDeleteErr) {
+        await sb
+          .from("companies")
+          .update({ is_active: true, updated_at: new Date().toISOString() })
+          .eq("id", companyId);
+        throw membershipDeleteErr;
+      }
+
+      return json(200, { ok: true, company: disabled });
+    }
+
     if (action === "blocked_add") {
       const blockedDate = str(body.blocked_date).slice(0, 10);
       const reasonRaw = body.reason != null ? String(body.reason) : "";

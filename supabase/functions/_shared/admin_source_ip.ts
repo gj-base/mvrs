@@ -9,6 +9,12 @@ const DEFAULT_ALLOWED_IPS = ["168.78.248.161"];
 
 export function getClientSourceIp(req: Request): string {
   const h = (name: string) => (req.headers.get(name) ?? "").trim();
+  // Supabase hosted Edge Functions가 제공하는 원본 클라이언트 체인을 우선 사용합니다.
+  const xff = h("x-forwarded-for");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
   const cf = h("cf-connecting-ip");
   if (cf) return cf;
   const fly = h("fly-client-ip");
@@ -17,11 +23,6 @@ export function getClientSourceIp(req: Request): string {
   if (tc) return tc;
   const xr = h("x-real-ip");
   if (xr) return xr;
-  const xff = h("x-forwarded-for");
-  if (xff) {
-    const first = xff.split(",")[0]?.trim();
-    if (first) return first;
-  }
   return "";
 }
 
