@@ -35,6 +35,11 @@ const SUMMER_BLACKOUT_END_MIN = 14 * 60;
 const TEMP_SLOT_BLACKOUT_START_YMD = "2026-08-03";
 const TEMP_SLOT_BLACKOUT_END_YMD = "2026-09-03";
 const TEMP_BLOCKED_SLOT_MINS = [11 * 60 + 30, 15 * 60 + 30];
+const SPECIFIC_1500_BLACKOUT_YMDS = new Set([
+  "2026-08-21",
+  "2026-08-28",
+  "2026-09-04",
+]);
 const AUG14_AFTERNOON_BLACKOUT_YMD = "2026-08-14";
 const AUG14_AFTERNOON_BLOCKED_SLOT_MINS = [14 * 60, 14 * 60 + 30, 15 * 60, 15 * 60 + 30];
 const TEMP_SLOT_BLACKOUT_ERROR =
@@ -286,6 +291,19 @@ function overlapsAug14AfternoonBlackout(
   return false;
 }
 
+function overlapsSpecific1500Blackout(
+  startSlot: string,
+  durationMins: number,
+  ymd: string,
+): boolean {
+  if (!SPECIFIC_1500_BLACKOUT_YMDS.has(ymd)) return false;
+  const sm = slotStartToMinutes(startSlot);
+  if (sm == null) return false;
+  const end = sm + durationMins;
+  const blockedStart = 15 * 60;
+  return sm < blockedStart + 30 && end > blockedStart;
+}
+
 function windowsOverlappingBooking(
   startSlot: string,
   durationMins: number,
@@ -354,6 +372,9 @@ function slotRangeFits(
     return false;
   }
   if (overlapsTempSlotBlackout(startSlot, durationMins, reservationYmd)) {
+    return false;
+  }
+  if (overlapsSpecific1500Blackout(startSlot, durationMins, reservationYmd)) {
     return false;
   }
   if (overlapsAug14AfternoonBlackout(startSlot, durationMins, reservationYmd)) {

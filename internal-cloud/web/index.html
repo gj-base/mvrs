@@ -1376,6 +1376,7 @@
       var TEMP_SLOT_BLACKOUT_START_YMD = '2026-08-03';
       var TEMP_SLOT_BLACKOUT_END_YMD = '2026-09-03';
       var TEMP_BLOCKED_SLOT_MINS = [11 * 60 + 30, 15 * 60 + 30];
+      var SPECIFIC_1500_BLACKOUT_YMDS = ['2026-08-21', '2026-08-28', '2026-09-04'];
       var AUG14_AFTERNOON_BLACKOUT_YMD = '2026-08-14';
       var AUG14_AFTERNOON_BLOCKED_SLOT_MINS = [14 * 60, 14 * 60 + 30, 15 * 60, 15 * 60 + 30];
       var FINDER_ASSUMED_DURATION_MIN = 30;
@@ -1417,6 +1418,15 @@
           if (sm < be && end > bs) return true;
         }
         return false;
+      }
+
+      function overlapsSpecific1500Blackout(startSlot, durationMins, ymd) {
+        if (SPECIFIC_1500_BLACKOUT_YMDS.indexOf(ymd) < 0) return false;
+        var sm = slotStartToMinutes(startSlot);
+        if (sm == null) return false;
+        var end = sm + durationMins;
+        var blockedStart = 15 * 60;
+        return sm < blockedStart + 30 && end > blockedStart;
       }
       var wkLabel = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -1577,6 +1587,7 @@
           if (sm < SUMMER_BLACKOUT_END_MIN && end > SUMMER_BLACKOUT_START_MIN) return false;
         }
         if (overlapsTempSlotBlackout(startSlot, durationMins, reservationYmd)) return false;
+        if (overlapsSpecific1500Blackout(startSlot, durationMins, reservationYmd)) return false;
         if (overlapsAug14AfternoonBlackout(startSlot, durationMins, reservationYmd)) return false;
         var keys = windowsOverlappingBooking(startSlot, durationMins);
         for (var i = 0; i < keys.length; i++) {
