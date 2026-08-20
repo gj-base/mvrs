@@ -590,7 +590,7 @@
       <section id="admin-panel-companies" class="admin-panel" aria-labelledby="admin-panel-companies-title">
         <div class="admin-panel-head">
           <h2 id="admin-panel-companies-title">업체 현황</h2>
-          <p>업체별 환입 가능 지사를 한눈에 확인하고 관리합니다.</p>
+          <p>업체 자체는 유지한 채, 업체별 환입 가능 지사 연결을 확인하고 관리합니다.</p>
         </div>
         <div class="card border-0 shadow-sm rounded-3 admin-companies-wrap">
           <div class="card-body p-4">
@@ -602,11 +602,11 @@
                 </select>
               </div>
               <div class="col-sm-6 col-md-3">
-                <label class="form-label small text-muted mb-0">상태</label>
+                <label class="form-label small text-muted mb-0">지사 연결 상태</label>
                 <select class="form-select form-select-sm" id="companyRegistryStatusFilter">
-                  <option value="all">전체</option>
-                  <option value="active" selected>활성만</option>
-                  <option value="inactive">비활성만</option>
+                  <option value="all" selected>전체</option>
+                  <option value="active">환입 가능</option>
+                  <option value="inactive">해제됨</option>
                 </select>
               </div>
               <div class="col-md-6">
@@ -659,7 +659,7 @@
               <div id="companyBranchAddFields" class="mb-3">
                 <label class="form-label fw-semibold" for="companyBranchSelect">추가할 지사</label>
                 <select class="form-select" id="companyBranchSelect"></select>
-                <div class="form-text">비활성 이력이 있는 지사를 선택하면 재활성화 대상으로 표시됩니다.</div>
+                <div class="form-text">해제 이력이 있는 지사를 선택하면 기존 연결을 원복합니다.</div>
               </div>
               <div id="companyBranchRemoveFields" class="alert alert-warning d-none mb-3" role="alert"></div>
               <div id="companyBranchLocalAuthFields" class="mb-3 d-none">
@@ -1900,7 +1900,7 @@
         var branchesHtml = branchRows.map(function (row) {
           var bnm = row.branches && row.branches.name ? String(row.branches.name) : '#' + row.branch_id;
           if (row.is_active === false) {
-            return '<span class="company-branch-chip is-inactive" title="비활성 지사">' + escapeHtml(bnm) + '</span>';
+            return '<span class="company-branch-chip is-inactive" title="해제된 지사 (현재 예약 불가)">' + escapeHtml(bnm) + '</span>';
           }
           return '<button type="button" class="company-branch-chip btn-company-branch-remove-preview" data-company-key="' +
             escapeAttr(group.key) + '" data-row-id="' + escapeAttr(String(row.id)) + '" title="' + escapeAttr(bnm + ' 지사 해제 화면 보기') + '">' +
@@ -1945,7 +1945,7 @@
       box.innerHTML = activeRows.length ? activeRows.map(function (row) {
         var name = row.branches && row.branches.name ? row.branches.name : '#' + row.branch_id;
         return '<span class="company-branch-chip">' + escapeHtml(name) + '</span>';
-      }).join('') : '<span class="text-muted small">활성 지사가 없습니다.</span>';
+      }).join('') : '<span class="text-muted small">현재 환입 가능한 지사가 없습니다. 업체 및 회원 연결은 유지됩니다.</span>';
     }
 
     function updateCompanyBranchAddPreview(group) {
@@ -1959,7 +1959,7 @@
         if (saveBtn) saveBtn.disabled = true;
         return;
       }
-      var suffix = opt.getAttribute('data-reactivate') === 'true' ? '의 기존 비활성 행을 재활성화합니다.' : '에 업체 행을 추가하고 기존 회원 멤버십을 연결합니다.';
+      var suffix = opt.getAttribute('data-reactivate') === 'true' ? '의 기존 지사 연결을 원복합니다.' : '에 환입 가능 지사를 추가하고 기존 회원 연결을 이어 줍니다.';
       summary.innerHTML = '<strong>' + escapeHtml(group.name) + '</strong> 업체를 <strong>' + escapeHtml(opt.textContent.replace(' (재활성화)', '')) + '</strong> 지사' + suffix;
       if (saveBtn) saveBtn.disabled = companyBranchSaveBusy;
     }
@@ -1989,7 +1989,7 @@
         (group.rows || []).forEach(function (row) { if (String(row.id) === String(rowId)) target = row; });
         var branchName = target && target.branches && target.branches.name ? String(target.branches.name) : '선택 지사';
         if (removeFields) removeFields.innerHTML = '<strong>' + escapeHtml(branchName) + '</strong> 지사를 해제하면 이 지사에서는 신규 예약을 할 수 없게 됩니다. 회원 계정과 예약 이력은 유지됩니다.';
-        if (summary) summary.innerHTML = '<strong>' + escapeHtml(group.name) + '</strong>의 <strong>' + escapeHtml(branchName) + '</strong> 지사 연결을 비활성화하고 해당 멤버십을 해제합니다.';
+        if (summary) summary.innerHTML = '<strong>' + escapeHtml(group.name) + '</strong>의 <strong>' + escapeHtml(branchName) + '</strong> 환입 가능 지사를 해제합니다. 나중에 원복할 수 있도록 업체 및 회원 연결은 유지합니다.';
         if (saveBtn) saveBtn.disabled = !target || companyBranchSaveBusy;
       } else {
         if (modeEl) modeEl.textContent = '지사 추가';

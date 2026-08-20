@@ -350,7 +350,7 @@ Deno.serve(async (req: Request) => {
       if (companyErr) throw companyErr;
       if (!company) return json(404, { ok: false, error: "업체 지사 행을 찾을 수 없습니다." });
       if (company.is_active === false) {
-        return json(409, { ok: false, error: "이미 비활성화된 지사입니다." });
+        return json(409, { ok: false, error: "이미 해제된 지사 연결입니다." });
       }
 
       const now = new Date().toISOString();
@@ -363,19 +363,15 @@ Deno.serve(async (req: Request) => {
         .single();
       if (disableErr) throw disableErr;
 
-      const { error: membershipDeleteErr } = await sb
-        .from("user_company_memberships")
-        .delete()
-        .eq("company_id", companyId);
-      if (membershipDeleteErr) {
-        await sb
-          .from("companies")
-          .update({ is_active: true, updated_at: new Date().toISOString() })
-          .eq("id", companyId);
-        throw membershipDeleteErr;
-      }
-
-      return json(200, { ok: true, company: disabled });
+      // Keep the account-to-company link while this branch is inactive.
+      // Booking reads and submit validation both require companies.is_active=true,
+      // so the preserved membership grants no booking access. It does, however,
+      // let a later branch reactivation/addition recover the existing account.
+      return json(200, {
+        ok: true,
+        company: disabled,
+        membership_preserved: true,
+      });
     }
 
     if (action === "blocked_add") {
