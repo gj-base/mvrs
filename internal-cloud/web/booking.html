@@ -1170,7 +1170,6 @@
                       <div class="time-select-below-slots">
                         <p class="text-muted small mb-0" id="timeSelectHint"></p>
                         <p class="time-summer-notice mb-0 d-none" id="timeSummerNotice" role="note">하절기(7월 1일~8월 31일)에는 13:00~14:00 구간은 예약할 수 없습니다.</p>
-                        <p class="time-summer-notice mb-0 d-none" id="timeTempSlotNotice" role="note">2026년 8월 3일~9월 3일 기간에는 11:30·15:30 예약이 불가합니다.</p>
                       </div>
                     </div>
                     <input type="hidden" id="time" name="time" required>
@@ -2730,14 +2729,6 @@
         el.classList.remove('d-none');
       } else {
         el.classList.add('d-none');
-      }
-      var tempEl = document.getElementById('timeTempSlotNotice');
-      if (tempEl) {
-        if (ymd && isYmdInTempSlotBlackoutPeriod(ymd)) {
-          tempEl.classList.remove('d-none');
-        } else {
-          tempEl.classList.add('d-none');
-        }
       }
     }
 
