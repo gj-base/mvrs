@@ -569,7 +569,7 @@
         <div class="admin-header-area flex-wrap gap-3">
           <!-- <h4 class="fw-bold m-0 d-none d-md-block" style="color:var(--kepco-blue)">차량 예약 캘린더</h4> -->
           <div class="d-flex flex-wrap align-items-center gap-3 ms-md-auto w-100 w-md-auto justify-content-between justify-content-md-end">
-            <button type="button" class="btn btn-outline-primary btn-sm text-nowrap" id="btnRefreshCalendar" title="예약·환입 불가일만 서버에서 다시 불러옵니다. 관리자 로그인은 유지됩니다.">
+            <button type="button" class="btn btn-outline-primary btn-sm text-nowrap" id="btnRefreshCalendar" title="예약만 서버에서 다시 불러옵니다. 관리자 로그인은 유지됩니다.">
               🔄 예약 새로고침
             </button>
             <div class="rejected-filter-bar d-flex align-items-center flex-wrap gap-2 gap-md-3">
@@ -2779,36 +2779,11 @@
           if (!showRejectedReservations) {
             q = q.neq('status', '반려');
           }
-          const blkBranchQ = sb
-            .from('branch_blocked_dates')
-            .select('id, branch_id, blocked_date, reason, branches(name)')
-            .order('blocked_date', { ascending: true })
-            .limit(500);
-          const blkGlobalQ = sb
-            .from('global_blocked_dates')
-            .select('id, blocked_date, reason')
-            .order('blocked_date', { ascending: true })
-            .limit(500);
-          const blkTimeQ = sb
-            .from('global_blocked_time_ranges')
-            .select('id, start_date, end_date, start_time, end_time, reason')
-            .order('start_date', { ascending: true })
-            .limit(500);
-          const [resResult, blkBranchResult, blkGlobalResult, blkTimeResult] = await Promise.all([q, blkBranchQ, blkGlobalQ, blkTimeQ]);
-          const { data, error } = resResult;
+          const { data, error } = await q;
           if (error) {
             alert("데이터 로드 오류: " + error.message);
             failureCallback(error);
             return;
-          }
-          if (blkBranchResult.error) {
-            console.warn(blkBranchResult.error);
-          }
-          if (blkGlobalResult.error) {
-            console.warn(blkGlobalResult.error);
-          }
-          if (blkTimeResult.error) {
-            console.warn(blkTimeResult.error);
           }
           var rows = data || [];
           adminReservationRowsById = {};
@@ -2873,101 +2848,10 @@
               }
             };
           });
-          (blkGlobalResult.data || []).forEach(function (blk) {
-            var ds = blk.blocked_date != null ? String(blk.blocked_date).substring(0, 10) : '';
-            if (!ds || !blk.id) return;
-            var rsn = blk.reason != null ? String(blk.reason).trim() : '';
-            events.push({
-              id: 'block-g-' + String(blk.id),
-              title: '🚫 환입 불가' + (rsn ? ' · ' + rsn.slice(0, 18) + (rsn.length > 18 ? '…' : '') : ''),
-              start: ds,
-              allDay: true,
-              color: '#7f8c8d',
-              textColor: '#fff',
-              extendedProps: {
-                isBlockedDate: true,
-                blockRowId: String(blk.id),
-                blockScope: 'global',
-                branchName: '—',
-                reasonText: rsn,
-                company: '(환입 불가일)',
-                status: '불가'
-              }
-            });
-          });
-          (blkTimeResult.data || []).forEach(function (blk) {
-            var startDate = blk.start_date != null ? String(blk.start_date).substring(0, 10) : '';
-            var endDate = blk.end_date != null ? String(blk.end_date).substring(0, 10) : startDate;
-            var startTime = blk.start_time != null ? String(blk.start_time).substring(0, 5) : '';
-            var endTime = blk.end_time != null ? String(blk.end_time).substring(0, 5) : '';
-            if (!startDate || !endDate || !startTime || !endTime || !blk.id) return;
-            var rsn = blk.reason != null ? String(blk.reason).trim() : '';
-            var cursor = new Date(startDate + 'T12:00:00');
-            var last = new Date(endDate + 'T12:00:00');
-            while (cursor <= last) {
-              var y = cursor.getFullYear();
-              var m = String(cursor.getMonth() + 1).padStart(2, '0');
-              var d = String(cursor.getDate()).padStart(2, '0');
-              var ds = y + '-' + m + '-' + d;
-              events.push({
-                id: 'block-t-' + String(blk.id) + '-' + ds,
-                title: '🚫 ' + startTime + '~' + endTime + (rsn ? ' · ' + rsn.slice(0, 16) + (rsn.length > 16 ? '…' : '') : ''),
-                start: ds + 'T' + startTime + ':00',
-                end: ds + 'T' + endTime + ':00',
-                color: '#5f6caf',
-                textColor: '#fff',
-                extendedProps: {
-                  isBlockedDate: true,
-                  blockRowId: String(blk.id),
-                  blockScope: 'time',
-                  branchName: '—',
-                  reasonText: rsn,
-                  company: '(환입 시간대 제한)',
-                  status: '불가'
-                }
-              });
-              cursor.setDate(cursor.getDate() + 1);
-            }
-          });
-          (blkBranchResult.data || []).forEach(function (blk) {
-            var ds = blk.blocked_date != null ? String(blk.blocked_date).substring(0, 10) : '';
-            if (!ds || !blk.id) return;
-            var bnm = (blk.branches && blk.branches.name) ? blk.branches.name : ('지사 #' + blk.branch_id);
-            var rsn = blk.reason != null ? String(blk.reason).trim() : '';
-            events.push({
-              id: 'block-b-' + String(blk.id),
-              title: '🚫 ' + bnm + (rsn ? ' · ' + rsn.slice(0, 18) + (rsn.length > 18 ? '…' : '') : ''),
-              start: ds,
-              allDay: true,
-              color: '#95a5a6',
-              textColor: '#fff',
-              extendedProps: {
-                isBlockedDate: true,
-                blockRowId: String(blk.id),
-                blockScope: 'branch',
-                branchName: bnm,
-                reasonText: rsn,
-                company: '(환입 불가일·구 지사별)',
-                status: '불가'
-              }
-            });
-          });
           successCallback(events);
         },
         eventClick: async function(info) {
           const p = info.event.extendedProps || {};
-          if (p.isBlockedDate) {
-            var ds = info.event.startStr != null ? String(info.event.startStr).substring(0, 10) : '';
-            var sc = p.blockScope === 'branch' ? 'branch' : (p.blockScope === 'time' ? 'time' : 'global');
-            var msg = sc === 'time'
-              ? ds + ' 시간대 제한을 해제할까요?'
-              : (sc === 'global'
-                ? '해당 종일 제한을 해제할까요?'
-                : '[' + (p.branchName || '지사') + '] ' + ds + ' 지사별 환입 불가일을 삭제할까요?');
-            if (!window.confirm(msg)) return;
-            removeBlockedDateRow(p.blockRowId, sc, true);
-            return;
-          }
           currentEvent = info.event;
           const statusRaw = p.status || '승인';
           const status = statusRaw === '대기' ? '승인' : statusRaw;
