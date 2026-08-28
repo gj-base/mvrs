@@ -31,6 +31,17 @@ function str(v: unknown): string {
   return String(v).trim();
 }
 
+function getSeoulTodayYmd(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 function positiveBigint(v: unknown): number | null {
   const n = Number(v);
   return Number.isSafeInteger(n) && n > 0 ? n : null;
@@ -381,6 +392,9 @@ Deno.serve(async (req: Request) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(blockedDate)) {
         return json(400, { ok: false, error: "blocked_date 형식이 올바르지 않습니다." });
       }
+      if (blockedDate < getSeoulTodayYmd()) {
+        return json(400, { ok: false, error: "지난 날짜는 환입 제한일로 등록할 수 없습니다." });
+      }
       const { data: ins, error: insErr } = await sb
         .from("global_blocked_dates")
         .insert({ blocked_date: blockedDate, reason })
@@ -404,6 +418,9 @@ Deno.serve(async (req: Request) => {
       const timeRe = /^(?:0[9]|1[0-5]):(?:00|30)$|^16:00$/;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(blockedDate)) {
         return json(400, { ok: false, error: "blocked_date 형식이 올바르지 않습니다." });
+      }
+      if (blockedDate < getSeoulTodayYmd()) {
+        return json(400, { ok: false, error: "지난 날짜는 환입 제한일로 등록할 수 없습니다." });
       }
       if (!timeRe.test(startTime) || !timeRe.test(endTime)) {
         return json(400, { ok: false, error: "시간은 09:00~16:00 사이의 30분 단위로 선택해 주세요." });

@@ -2587,6 +2587,23 @@
       return timeMode && timeMode.checked ? 'time' : 'all_day';
     }
 
+    function getSeoulTodayYmd() {
+      var parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(new Date());
+      var values = {};
+      parts.forEach(function (part) { values[part.type] = part.value; });
+      return values.year + '-' + values.month + '-' + values.day;
+    }
+
+    function syncBlockedDateMin() {
+      var di = document.getElementById('blockDateInput');
+      if (di) di.min = getSeoulTodayYmd();
+    }
+
     function syncBlockedModeUi() {
       var isTime = getSelectedBlockMode() === 'time';
       document.querySelectorAll('.block-time-field').forEach(function (el) {
@@ -2643,6 +2660,11 @@
       var endTime = ei && ei.value ? ei.value : '';
       if (!dval) {
         alert('날짜를 선택해 주세요.');
+        return;
+      }
+      if (dval < getSeoulTodayYmd()) {
+        alert('지난 날짜는 환입 제한일로 등록할 수 없습니다.');
+        if (di) di.value = '';
         return;
       }
       if (mode === 'time' && (!startTime || !endTime || endTime <= startTime)) {
@@ -3063,6 +3085,7 @@
     document.querySelectorAll('input[name="blockMode"]').forEach(function (el) {
       el.addEventListener('change', syncBlockedModeUi);
     });
+    syncBlockedDateMin();
     syncBlockedModeUi();
     var btnAddBlk = document.getElementById('btnAddBlockedDate');
     if (btnAddBlk) btnAddBlk.addEventListener('click', function () { onAddBlockedDateClick(); });
