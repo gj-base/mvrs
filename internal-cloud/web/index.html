@@ -1373,13 +1373,8 @@
       var DAY_END_MIN = 16 * 60;
       var SUMMER_BLACKOUT_START_MIN = 13 * 60;
       var SUMMER_BLACKOUT_END_MIN = 14 * 60;
-      var TEMP_SLOT_BLACKOUT_START_YMD = '2026-08-03';
-      var TEMP_SLOT_BLACKOUT_END_YMD = '2026-09-03';
-      var TEMP_BLOCKED_SLOT_MINS = [11 * 60 + 30, 15 * 60 + 30];
-      var SPECIFIC_1500_BLACKOUT_YMDS = ['2026-08-21', '2026-08-28', '2026-09-04'];
-      var AUG14_AFTERNOON_BLACKOUT_YMD = '2026-08-14';
-      var AUG14_AFTERNOON_BLOCKED_SLOT_MINS = [14 * 60, 14 * 60 + 30, 15 * 60, 15 * 60 + 30];
       var FINDER_ASSUMED_DURATION_MIN = 30;
+      var globalBlockedTimeRanges = [];
 
       function isYmdSummerAfternoonBlackoutSeason(ymd) {
         if (!ymd || String(ymd).length < 10) return false;
@@ -1390,43 +1385,21 @@
         return false;
       }
 
-      function isYmdInTempSlotBlackoutPeriod(ymd) {
-        return ymd >= TEMP_SLOT_BLACKOUT_START_YMD && ymd <= TEMP_SLOT_BLACKOUT_END_YMD;
-      }
-
-      function overlapsTempSlotBlackout(startSlot, durationMins, ymd) {
-        if (!ymd || !isYmdInTempSlotBlackoutPeriod(ymd)) return false;
+      function overlapsAdminTimeBlock(startSlot, durationMins, ymd) {
+        if (!ymd) return false;
         var sm = slotStartToMinutes(startSlot);
         if (sm == null) return false;
         var end = sm + durationMins;
-        for (var ti = 0; ti < TEMP_BLOCKED_SLOT_MINS.length; ti++) {
-          var bs = TEMP_BLOCKED_SLOT_MINS[ti];
-          var be = bs + 30;
-          if (sm < be && end > bs) return true;
+        for (var i = 0; i < globalBlockedTimeRanges.length; i++) {
+          var row = globalBlockedTimeRanges[i] || {};
+          var startDate = row.start_date != null ? String(row.start_date).substring(0, 10) : '';
+          var endDate = row.end_date != null ? String(row.end_date).substring(0, 10) : '';
+          if (!startDate || !endDate || ymd < startDate || ymd > endDate) continue;
+          var bs = slotStartToMinutes(String(row.start_time || '').substring(0, 5));
+          var be = slotStartToMinutes(String(row.end_time || '').substring(0, 5));
+          if (bs != null && be != null && sm < be && end > bs) return true;
         }
         return false;
-      }
-
-      function overlapsAug14AfternoonBlackout(startSlot, durationMins, ymd) {
-        if (ymd !== AUG14_AFTERNOON_BLACKOUT_YMD) return false;
-        var sm = slotStartToMinutes(startSlot);
-        if (sm == null) return false;
-        var end = sm + durationMins;
-        for (var ai = 0; ai < AUG14_AFTERNOON_BLOCKED_SLOT_MINS.length; ai++) {
-          var bs = AUG14_AFTERNOON_BLOCKED_SLOT_MINS[ai];
-          var be = bs + 30;
-          if (sm < be && end > bs) return true;
-        }
-        return false;
-      }
-
-      function overlapsSpecific1500Blackout(startSlot, durationMins, ymd) {
-        if (SPECIFIC_1500_BLACKOUT_YMDS.indexOf(ymd) < 0) return false;
-        var sm = slotStartToMinutes(startSlot);
-        if (sm == null) return false;
-        var end = sm + durationMins;
-        var blockedStart = 15 * 60;
-        return sm < blockedStart + 30 && end > blockedStart;
       }
       var wkLabel = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -1586,9 +1559,7 @@
         if (reservationYmd && isYmdSummerAfternoonBlackoutSeason(reservationYmd)) {
           if (sm < SUMMER_BLACKOUT_END_MIN && end > SUMMER_BLACKOUT_START_MIN) return false;
         }
-        if (overlapsTempSlotBlackout(startSlot, durationMins, reservationYmd)) return false;
-        if (overlapsSpecific1500Blackout(startSlot, durationMins, reservationYmd)) return false;
-        if (overlapsAug14AfternoonBlackout(startSlot, durationMins, reservationYmd)) return false;
+        if (overlapsAdminTimeBlock(startSlot, durationMins, reservationYmd)) return false;
         var keys = windowsOverlappingBooking(startSlot, durationMins);
         for (var i = 0; i < keys.length; i++) {
           var s = keys[i];
@@ -1828,9 +1799,11 @@
 
           var r4p = sb.from('branch_blocked_dates').select('branch_id,blocked_date');
           var r4gp = sb.from('global_blocked_dates').select('blocked_date');
-          var r4r = await Promise.all([r4p, r4gp]);
+          var r4tp = sb.from('global_blocked_time_ranges').select('start_date,end_date,start_time,end_time,reason');
+          var r4r = await Promise.all([r4p, r4gp, r4tp]);
           var r4 = r4r[0];
           var r4g = r4r[1];
+          var r4t = r4r[2];
           if (r4.error) {
             console.warn(r4.error);
             window.__landingBranchBlockedYmd = {};
@@ -1857,6 +1830,12 @@
               if (ymdG) gmap[ymdG] = true;
             });
             window.__landingGlobalBlockedYmd = gmap;
+          }
+          if (r4t.error) {
+            console.warn(r4t.error);
+            globalBlockedTimeRanges = [];
+          } else {
+            globalBlockedTimeRanges = r4t.data || [];
           }
 
           var fiveDates = getFiveDashboardDates(new Date());

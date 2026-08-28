@@ -433,7 +433,7 @@
         </button>
         <button type="button" class="admin-nav-btn" data-admin-panel="blocked" id="navBtnBlocked" aria-current="false">
           <span class="admin-nav-ico" aria-hidden="true">🚫</span>
-          <span>환입 불가일</span>
+          <span>환입 불가일·시간 설정</span>
         </button>
         <button type="button" class="admin-nav-btn" data-admin-panel="popup" id="navBtnPopup" aria-current="false">
           <span class="admin-nav-ico" aria-hidden="true">📢</span>
@@ -574,19 +574,52 @@
 
       <section id="admin-panel-blocked" class="admin-panel" aria-labelledby="admin-panel-blocked-title">
         <div class="admin-panel-head">
-          <h2 id="admin-panel-blocked-title">환입 불가일</h2>
-          <p>선택한 날짜는 신규 예약이 제한됩니다. 캘린더에도 회색으로 표시됩니다.</p>
+          <h2 id="admin-panel-blocked-title">환입 불가일·시간 설정</h2>
+          <p>선택한 날짜 전체 또는 지정한 시간대의 신규 예약을 제한합니다.</p>
         </div>
         <div class="card border-0 shadow-sm rounded-3">
           <div class="card-body p-4">
-            <p class="text-muted small mb-3">내부 일정 등으로 해당 일자 전체에 신규 예약이 불가한 날짜를 추가합니다. (이미 접수된 예약은 일정 관리에서 별도 처리)</p>
+            <div class="mb-3">
+              <label class="form-label small text-muted d-block mb-2">제한 유형</label>
+              <div class="btn-group" role="group" aria-label="환입 제한 유형">
+                <input type="radio" class="btn-check" name="blockMode" id="blockModeAllDay" value="all_day" autocomplete="off" checked>
+                <label class="btn btn-outline-primary btn-sm" for="blockModeAllDay">종일 제한</label>
+                <input type="radio" class="btn-check" name="blockMode" id="blockModeTime" value="time" autocomplete="off">
+                <label class="btn btn-outline-primary btn-sm" for="blockModeTime">시간대 제한</label>
+              </div>
+              <p class="text-muted small mb-0 mt-2" id="blockModeHint">선택한 날짜의 모든 신규 예약을 제한합니다.</p>
+            </div>
             <div class="row g-2 align-items-end">
               <div class="col-md-3 col-lg-2">
                 <label class="form-label small text-muted mb-0">날짜</label>
                 <input type="date" class="form-control form-control-sm" id="blockDateInput">
               </div>
+              <div class="col-md-2 col-lg-2 block-time-field d-none">
+                <label class="form-label small text-muted mb-0">시작시간</label>
+                <select class="form-select form-select-sm" id="blockStartTimeInput">
+                  <option value="09:00">09:00</option><option value="09:30">09:30</option>
+                  <option value="10:00">10:00</option><option value="10:30">10:30</option>
+                  <option value="11:00">11:00</option><option value="11:30">11:30</option>
+                  <option value="12:00">12:00</option><option value="12:30">12:30</option>
+                  <option value="13:00" selected>13:00</option><option value="13:30">13:30</option>
+                  <option value="14:00">14:00</option><option value="14:30">14:30</option>
+                  <option value="15:00">15:00</option><option value="15:30">15:30</option>
+                </select>
+              </div>
+              <div class="col-md-2 col-lg-2 block-time-field d-none">
+                <label class="form-label small text-muted mb-0">종료시간</label>
+                <select class="form-select form-select-sm" id="blockEndTimeInput">
+                  <option value="09:30">09:30</option><option value="10:00">10:00</option>
+                  <option value="10:30">10:30</option><option value="11:00">11:00</option>
+                  <option value="11:30">11:30</option><option value="12:00">12:00</option>
+                  <option value="12:30">12:30</option><option value="13:00">13:00</option>
+                  <option value="13:30">13:30</option><option value="14:00">14:00</option>
+                  <option value="14:30">14:30</option><option value="15:00" selected>15:00</option>
+                  <option value="15:30">15:30</option><option value="16:00">16:00</option>
+                </select>
+              </div>
               <div class="col-md-2 col-lg-2">
-                <button type="button" class="btn btn-sm w-100 fw-bold text-white" style="background:var(--kepco-blue);min-height:31px" id="btnAddBlockedDate">추가</button>
+                <button type="button" class="btn btn-sm w-100 fw-bold text-white" style="background:var(--kepco-blue);min-height:31px" id="btnAddBlockedDate">종일 제한 등록</button>
               </div>
             </div>
             <p class="small text-muted mb-0 mt-2 d-none" id="blockAddBusyHint" role="status" aria-live="polite">등록하는 중입니다…</p>
@@ -594,9 +627,10 @@
               <label class="form-label small text-muted mb-0">사유 (선택)</label>
               <input type="text" class="form-control form-control-sm" id="blockReasonInput" maxlength="500" placeholder="예: 재고실사">
             </div>
-            <div class="table-responsive mt-4 mb-0" style="max-height:min(55vh, 420px)">
+            <h3 class="h6 fw-bold mt-4 mb-2">등록된 환입 제한</h3>
+            <div class="table-responsive mb-0" style="max-height:min(55vh, 420px)">
               <table class="table table-sm table-hover align-middle mb-0" id="blockedDatesTable">
-                <thead class="table-light sticky-top"><tr><th>날짜</th><th>사유</th><th class="text-nowrap signup-manage-col text-center">관리</th></tr></thead>
+                <thead class="table-light sticky-top"><tr><th>구분</th><th>날짜</th><th>시간</th><th>사유</th><th class="text-nowrap signup-manage-col text-center">관리</th></tr></thead>
                 <tbody id="blockedDatesTableBody"></tbody>
               </table>
             </div>
@@ -1119,19 +1153,32 @@
 
     async function loadAdminPublicSettingsPanel() {
       try {
-        const sb = getSupabase();
-        const blkRes = await sb
-          .from('global_blocked_dates')
-          .select('id, blocked_date, reason')
-          .order('blocked_date', { ascending: false })
-          .limit(300);
-        if (blkRes.error) throw blkRes.error;
-        renderBlockedDatesTableRows(blkRes.data || []);
+        await loadReservationBlocksTable();
         await loadSitePopupsTable();
       } catch (e) {
         console.warn(e);
         alert('관리 패널(불가일) 데이터를 불러오지 못했습니다. 마이그레이션·RLS를 확인해 주세요.\n' + (e.message || e));
       }
+    }
+
+    async function loadReservationBlocksTable() {
+      const sb = getSupabase();
+      const results = await Promise.all([
+        sb.from('global_blocked_dates').select('id, blocked_date, reason').order('blocked_date', { ascending: false }).limit(300),
+        sb.from('global_blocked_time_ranges').select('id, start_date, end_date, start_time, end_time, reason').order('start_date', { ascending: false }).limit(500)
+      ]);
+      if (results[0].error) throw results[0].error;
+      if (results[1].error) throw results[1].error;
+      var rows = [];
+      (results[0].data || []).forEach(function (row) { rows.push(Object.assign({ block_kind: 'all_day' }, row)); });
+      (results[1].data || []).forEach(function (row) { rows.push(Object.assign({ block_kind: 'time' }, row)); });
+      rows.sort(function (a, b) {
+        var ad = a.block_kind === 'time' ? String(a.start_date || '') : String(a.blocked_date || '');
+        var bd = b.block_kind === 'time' ? String(b.start_date || '') : String(b.blocked_date || '');
+        if (ad !== bd) return bd.localeCompare(ad);
+        return String(a.start_time || '').localeCompare(String(b.start_time || ''));
+      });
+      renderBlockedDatesTableRows(rows);
     }
 
     function getAdminTrashIconSvg() {
@@ -1466,23 +1513,30 @@
       tb.innerHTML = '';
       if (!rows.length) {
         var tr0 = document.createElement('tr');
-        tr0.innerHTML = '<td colspan="3" class="text-muted small">등록된 불가일이 없습니다.</td>';
+        tr0.innerHTML = '<td colspan="5" class="text-muted small">등록된 환입 제한이 없습니다.</td>';
         tb.appendChild(tr0);
         return;
       }
       rows.forEach(function (row) {
         var tr = document.createElement('tr');
-        var d = row.blocked_date != null ? String(row.blocked_date).substring(0, 10) : '';
+        var isTime = row.block_kind === 'time';
+        var startDate = isTime && row.start_date != null ? String(row.start_date).substring(0, 10) : '';
+        var endDate = isTime && row.end_date != null ? String(row.end_date).substring(0, 10) : startDate;
+        var d = isTime ? startDate : (row.blocked_date != null ? String(row.blocked_date).substring(0, 10) : '');
+        var dateText = isTime && endDate && endDate !== startDate ? startDate + ' ~ ' + endDate : d;
+        var timeText = isTime ? String(row.start_time || '').substring(0, 5) + ' ~ ' + String(row.end_time || '').substring(0, 5) : '종일';
         var rs = row.reason != null ? String(row.reason) : '';
         var id = row.id != null ? String(row.id) : '';
         tr.innerHTML =
-          '<td class="small text-nowrap">' + escapeHtml(d) + '</td>' +
+          '<td class="small text-nowrap"><span class="badge ' + (isTime ? 'text-bg-primary' : 'text-bg-secondary') + '">' + (isTime ? '시간대 제한' : '종일 제한') + '</span></td>' +
+          '<td class="small text-nowrap">' + escapeHtml(dateText) + '</td>' +
+          '<td class="small text-nowrap">' + escapeHtml(timeText) + '</td>' +
           '<td class="small text-truncate" style="max-width:200px" title="' + escapeAttr(rs) + '">' + escapeHtml(rs || '—') + '</td>' +
-          '<td class="text-center text-nowrap signup-action-cell signup-manage-col"><button type="button" class="btn-signup-delete btn-remove-block" title="환입 불가일 삭제" data-id="' +
+          '<td class="text-center text-nowrap signup-action-cell signup-manage-col"><button type="button" class="btn-signup-delete btn-remove-block" title="환입 제한 해제" data-id="' +
           escapeAttr(id) +
-          '" data-scope="global">' +
+          '" data-scope="' + (isTime ? 'time' : 'global') + '">' +
           getAdminTrashIconSvg() +
-          '<span>삭제</span></button></td>';
+          '<span>제한 해제</span></button></td>';
         tb.appendChild(tr);
       });
       tb.querySelectorAll('.btn-remove-block').forEach(function (btn) {
@@ -1904,13 +1958,12 @@
     }
 
     async function removeBlockedDateRow(id, blockedScope, skipConfirm) {
-      var scope = blockedScope === 'branch' ? 'branch' : 'global';
+      var scope = blockedScope === 'branch' ? 'branch' : (blockedScope === 'time' ? 'time' : 'global');
       if (!id) return;
       if (!skipConfirm) {
-        var q =
-          scope === 'global'
-            ? '해당 환입 불가일을 삭제할까요?'
-            : '해당 지사별 환입 불가일을 삭제할까요?';
+        var q = scope === 'time'
+          ? '해당 시간대 제한을 해제할까요?'
+          : (scope === 'global' ? '해당 종일 제한을 해제할까요?' : '해당 지사별 환입 불가일을 삭제할까요?');
         if (!window.confirm(q)) return;
       }
       if (!adminNotifySecretSession) {
@@ -1935,21 +1988,33 @@
           alert('삭제 실패: ' + (data && data.error ? data.error : '알 수 없는 오류'));
           return;
         }
-        if (scope === 'global') {
-          const r2 = await sb.from('global_blocked_dates').select('id, blocked_date, reason').order('blocked_date', { ascending: false }).limit(300);
-          if (r2.error) throw r2.error;
-          renderBlockedDatesTableRows(r2.data || []);
-        }
+        if (scope !== 'branch') await loadReservationBlocksTable();
         if (calendarInstance) calendarInstance.refetchEvents();
       } catch (e) {
         alert('삭제 중 오류: ' + (e.message || e));
       }
     }
 
+    function getSelectedBlockMode() {
+      var timeMode = document.getElementById('blockModeTime');
+      return timeMode && timeMode.checked ? 'time' : 'all_day';
+    }
+
+    function syncBlockedModeUi() {
+      var isTime = getSelectedBlockMode() === 'time';
+      document.querySelectorAll('.block-time-field').forEach(function (el) { el.classList.toggle('d-none', !isTime); });
+      var hint = document.getElementById('blockModeHint');
+      if (hint) hint.textContent = isTime ? '선택한 날짜의 지정한 시간대와 겹치는 신규 예약을 제한합니다.' : '선택한 날짜의 모든 신규 예약을 제한합니다.';
+      var btn = document.getElementById('btnAddBlockedDate');
+      if (btn && btn.getAttribute('aria-busy') !== 'true') btn.textContent = isTime ? '시간대 제한 등록' : '종일 제한 등록';
+    }
+
     function setBlockedDateAddUiBusy(isBusy) {
       var btn = document.getElementById('btnAddBlockedDate');
       var di = document.getElementById('blockDateInput');
       var ri = document.getElementById('blockReasonInput');
+      var si = document.getElementById('blockStartTimeInput');
+      var ei = document.getElementById('blockEndTimeInput');
       var hint = document.getElementById('blockAddBusyHint');
       if (btn) {
         btn.disabled = !!isBusy;
@@ -1959,21 +2024,34 @@
             '<span class="spinner-border spinner-border-sm me-1 align-middle" role="status" aria-hidden="true"></span>' +
             '<span class="align-middle">등록 중…</span>';
         } else {
-          btn.textContent = '추가';
+          btn.removeAttribute('aria-busy');
+          btn.textContent = getSelectedBlockMode() === 'time' ? '시간대 제한 등록' : '종일 제한 등록';
         }
       }
       if (di) di.disabled = !!isBusy;
       if (ri) ri.disabled = !!isBusy;
+      if (si) si.disabled = !!isBusy;
+      if (ei) ei.disabled = !!isBusy;
+      document.querySelectorAll('input[name="blockMode"]').forEach(function (el) { el.disabled = !!isBusy; });
       if (hint) hint.classList.toggle('d-none', !isBusy);
     }
 
     async function onAddBlockedDateClick() {
       var di = document.getElementById('blockDateInput');
       var ri = document.getElementById('blockReasonInput');
+      var si = document.getElementById('blockStartTimeInput');
+      var ei = document.getElementById('blockEndTimeInput');
       var dval = di && di.value ? di.value.trim() : '';
       var reason = ri && ri.value ? ri.value.trim() : '';
+      var mode = getSelectedBlockMode();
+      var startTime = si && si.value ? si.value : '';
+      var endTime = ei && ei.value ? ei.value : '';
       if (!dval) {
         alert('날짜를 선택해 주세요.');
+        return;
+      }
+      if (mode === 'time' && (!startTime || !endTime || endTime <= startTime)) {
+        alert('종료시간은 시작시간보다 늦게 선택해 주세요.');
         return;
       }
       if (!adminNotifySecretSession) {
@@ -1983,10 +2061,36 @@
       setBlockedDateAddUiBusy(true);
       try {
         const sb = getSupabase();
+        if (mode === 'time') {
+          const conflictResult = await sb.from('reservations')
+            .select('reservation_time, reservation_duration_minutes, person_info')
+            .eq('reservation_date', dval)
+            .neq('status', '반려');
+          if (conflictResult.error) throw conflictResult.error;
+          var toMins = function (value) {
+            var match = /^(\d{2}):(\d{2})/.exec(String(value || ''));
+            return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+          };
+          var blockStart = toMins(startTime);
+          var blockEnd = toMins(endTime);
+          var conflictCount = (conflictResult.data || []).filter(function (row) {
+            var reservationStart = toMins(row.reservation_time);
+            if (reservationStart == null) return false;
+            var pi = row.person_info && typeof row.person_info === 'object' ? row.person_info : {};
+            var duration = Number(row.reservation_duration_minutes) === 60 || Number(pi.reservation_duration_minutes) === 60 ? 60 : 30;
+            return reservationStart < blockEnd && reservationStart + duration > blockStart;
+          }).length;
+          if (conflictCount > 0 && !window.confirm(
+            '선택한 시간대와 겹치는 기존 예약이 ' + conflictCount + '건 있습니다.\n' +
+            '기존 예약은 자동 취소되지 않으며 신규 예약만 제한됩니다.\n\n그래도 등록할까요?'
+          )) return;
+        }
         const { data, error } = await sb.functions.invoke('admin-manage-public-settings', {
           body: {
-            action: 'blocked_add',
+            action: mode === 'time' ? 'blocked_time_add' : 'blocked_add',
             blocked_date: dval,
+            start_time: mode === 'time' ? startTime : undefined,
+            end_time: mode === 'time' ? endTime : undefined,
             reason: reason || undefined,
             admin_secret: adminNotifySecretSession
           }
@@ -1999,11 +2103,12 @@
           alert('등록 실패: ' + (data && data.error ? data.error : '알 수 없는 오류'));
           return;
         }
-        const r2 = await sb.from('global_blocked_dates').select('id, blocked_date, reason').order('blocked_date', { ascending: false }).limit(300);
-        if (r2.error) throw r2.error;
-        renderBlockedDatesTableRows(r2.data || []);
+        await loadReservationBlocksTable();
         if (di) di.value = '';
         if (ri) ri.value = '';
+        if (mode === 'time' && Number(data.conflicting_reservations) > 0) {
+          alert('시간대 제한이 등록되었습니다. 기존 예약 ' + Number(data.conflicting_reservations) + '건은 일정 관리에서 별도로 확인해 주세요.');
+        }
         if (calendarInstance) calendarInstance.refetchEvents();
       } catch (e) {
         alert('등록 중 오류: ' + (e.message || e));
@@ -2086,7 +2191,12 @@
             .select('id, blocked_date, reason')
             .order('blocked_date', { ascending: true })
             .limit(500);
-          const [resResult, blkBranchResult, blkGlobalResult] = await Promise.all([q, blkBranchQ, blkGlobalQ]);
+          const blkTimeQ = sb
+            .from('global_blocked_time_ranges')
+            .select('id, start_date, end_date, start_time, end_time, reason')
+            .order('start_date', { ascending: true })
+            .limit(500);
+          const [resResult, blkBranchResult, blkGlobalResult, blkTimeResult] = await Promise.all([q, blkBranchQ, blkGlobalQ, blkTimeQ]);
           const { data, error } = resResult;
           if (error) {
             alert("데이터 로드 오류: " + error.message);
@@ -2098,6 +2208,9 @@
           }
           if (blkGlobalResult.error) {
             console.warn(blkGlobalResult.error);
+          }
+          if (blkTimeResult.error) {
+            console.warn(blkTimeResult.error);
           }
           var rows = data || [];
           adminReservationRowsById = {};
@@ -2184,6 +2297,32 @@
               }
             });
           });
+          (blkTimeResult.data || []).forEach(function (blk) {
+            var startDate = blk.start_date != null ? String(blk.start_date).substring(0, 10) : '';
+            var endDate = blk.end_date != null ? String(blk.end_date).substring(0, 10) : startDate;
+            var startTime = blk.start_time != null ? String(blk.start_time).substring(0, 5) : '';
+            var endTime = blk.end_time != null ? String(blk.end_time).substring(0, 5) : '';
+            if (!startDate || !endDate || !startTime || !endTime || !blk.id) return;
+            var rsn = blk.reason != null ? String(blk.reason).trim() : '';
+            var cursor = new Date(startDate + 'T12:00:00');
+            var last = new Date(endDate + 'T12:00:00');
+            while (cursor <= last) {
+              var y = cursor.getFullYear();
+              var m = String(cursor.getMonth() + 1).padStart(2, '0');
+              var d = String(cursor.getDate()).padStart(2, '0');
+              var ds = y + '-' + m + '-' + d;
+              events.push({
+                id: 'block-t-' + String(blk.id) + '-' + ds,
+                title: '🚫 ' + startTime + '~' + endTime + (rsn ? ' · ' + rsn.slice(0, 16) + (rsn.length > 16 ? '…' : '') : ''),
+                start: ds + 'T' + startTime + ':00',
+                end: ds + 'T' + endTime + ':00',
+                color: '#5f6caf',
+                textColor: '#fff',
+                extendedProps: { isBlockedDate: true, blockRowId: String(blk.id), blockScope: 'time', branchName: '—', reasonText: rsn, company: '(환입 시간대 제한)', status: '불가' }
+              });
+              cursor.setDate(cursor.getDate() + 1);
+            }
+          });
           (blkBranchResult.data || []).forEach(function (blk) {
             var ds = blk.blocked_date != null ? String(blk.blocked_date).substring(0, 10) : '';
             if (!ds || !blk.id) return;
@@ -2213,11 +2352,10 @@
           const p = info.event.extendedProps || {};
           if (p.isBlockedDate) {
             var ds = info.event.startStr != null ? String(info.event.startStr).substring(0, 10) : '';
-            var sc = p.blockScope === 'branch' ? 'branch' : 'global';
-            var msg =
-              sc === 'global'
-                ? '해당 환입 불가일을 삭제할까요?'
-                : '[' + (p.branchName || '지사') + '] ' + ds + ' 지사별 환입 불가일을 삭제할까요?';
+            var sc = p.blockScope === 'branch' ? 'branch' : (p.blockScope === 'time' ? 'time' : 'global');
+            var msg = sc === 'time'
+              ? ds + ' 시간대 제한을 해제할까요?'
+              : (sc === 'global' ? '해당 종일 제한을 해제할까요?' : '[' + (p.branchName || '지사') + '] ' + ds + ' 지사별 환입 불가일을 삭제할까요?');
             if (!window.confirm(msg)) return;
             removeBlockedDateRow(p.blockRowId, sc, true);
             return;
@@ -2418,6 +2556,10 @@
       btnViewBookingForm.addEventListener('click', openAdminBookingView);
     }
 
+    document.querySelectorAll('input[name="blockMode"]').forEach(function (el) {
+      el.addEventListener('change', syncBlockedModeUi);
+    });
+    syncBlockedModeUi();
     var btnAddBlk = document.getElementById('btnAddBlockedDate');
     if (btnAddBlk) btnAddBlk.addEventListener('click', function () { onAddBlockedDateClick(); });
     var btnPopNew = document.getElementById('btnSitePopupNew');

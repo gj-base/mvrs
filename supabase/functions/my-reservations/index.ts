@@ -32,18 +32,14 @@ const LUNCH_END_MIN = 13 * 60;
 const DAY_END_MIN = 16 * 60;
 const SUMMER_BLACKOUT_START_MIN = 13 * 60;
 const SUMMER_BLACKOUT_END_MIN = 14 * 60;
-const TEMP_SLOT_BLACKOUT_START_YMD = "2026-08-03";
-const TEMP_SLOT_BLACKOUT_END_YMD = "2026-09-03";
-const TEMP_BLOCKED_SLOT_MINS = [11 * 60 + 30, 15 * 60 + 30];
-const SPECIFIC_1500_BLACKOUT_YMDS = new Set([
-  "2026-08-21",
-  "2026-08-28",
-  "2026-09-04",
-]);
-const AUG14_AFTERNOON_BLACKOUT_YMD = "2026-08-14";
-const AUG14_AFTERNOON_BLOCKED_SLOT_MINS = [14 * 60, 14 * 60 + 30, 15 * 60, 15 * 60 + 30];
-const TEMP_SLOT_BLACKOUT_ERROR =
-  "2026년 8월 3일~9월 3일 기간에는 11:30·15:30 예약이 불가합니다. 다른 시간을 선택해 주세요.";
+
+type GlobalBlockedTimeRange = {
+  start_date?: unknown;
+  end_date?: unknown;
+  start_time?: unknown;
+  end_time?: unknown;
+  reason?: unknown;
+};
 
 type Action = "list" | "get" | "update" | "delete";
 
@@ -255,53 +251,34 @@ function overlapsSummerAfternoonBlackout(
   return sm < SUMMER_BLACKOUT_END_MIN && end > SUMMER_BLACKOUT_START_MIN;
 }
 
-function isYmdInTempSlotBlackoutPeriod(ymd: string): boolean {
-  return ymd >= TEMP_SLOT_BLACKOUT_START_YMD && ymd <= TEMP_SLOT_BLACKOUT_END_YMD;
-}
-
-function overlapsTempSlotBlackout(
+function findOverlappingAdminTimeBlock(
+  rows: GlobalBlockedTimeRange[],
   startSlot: string,
   durationMins: number,
   ymd: string,
-): boolean {
-  if (!ymd || !isYmdInTempSlotBlackoutPeriod(ymd)) return false;
+): GlobalBlockedTimeRange | null {
   const sm = slotStartToMinutes(startSlot);
-  if (sm == null) return false;
+  if (!ymd || sm == null) return null;
   const end = sm + durationMins;
-  for (const bs of TEMP_BLOCKED_SLOT_MINS) {
-    const be = bs + 30;
-    if (sm < be && end > bs) return true;
+  for (const row of rows || []) {
+    const startDate = str(row.start_date).slice(0, 10);
+    const endDate = str(row.end_date).slice(0, 10);
+    if (!startDate || !endDate || ymd < startDate || ymd > endDate) continue;
+    const blockedStart = slotStartToMinutes(str(row.start_time).slice(0, 5));
+    const blockedEnd = slotStartToMinutes(str(row.end_time).slice(0, 5));
+    if (blockedStart == null || blockedEnd == null) continue;
+    if (sm < blockedEnd && end > blockedStart) return row;
   }
-  return false;
+  return null;
 }
 
-function overlapsAug14AfternoonBlackout(
-  startSlot: string,
-  durationMins: number,
-  ymd: string,
-): boolean {
-  if (ymd !== AUG14_AFTERNOON_BLACKOUT_YMD) return false;
-  const sm = slotStartToMinutes(startSlot);
-  if (sm == null) return false;
-  const end = sm + durationMins;
-  for (const bs of AUG14_AFTERNOON_BLOCKED_SLOT_MINS) {
-    const be = bs + 30;
-    if (sm < be && end > bs) return true;
-  }
-  return false;
-}
-
-function overlapsSpecific1500Blackout(
-  startSlot: string,
-  durationMins: number,
-  ymd: string,
-): boolean {
-  if (!SPECIFIC_1500_BLACKOUT_YMDS.has(ymd)) return false;
-  const sm = slotStartToMinutes(startSlot);
-  if (sm == null) return false;
-  const end = sm + durationMins;
-  const blockedStart = 15 * 60;
-  return sm < blockedStart + 30 && end > blockedStart;
+function adminTimeBlockErrorMessage(block: GlobalBlockedTimeRange): string {
+  const start = str(block.start_time).slice(0, 5);
+  const end = str(block.end_time).slice(0, 5);
+  const reason = str(block.reason);
+  return `선택한 시간은 환입 제한 시간대(${start}~${end})와 겹쳐 예약할 수 없습니다.${
+    reason ? ` 사유: ${reason}` : ""
+  }`;
 }
 
 function windowsOverlappingBooking(
@@ -369,15 +346,6 @@ function slotRangeFits(
   if (end > DAY_END_MIN) return false;
   if (sm < LUNCH_END_MIN && end > LUNCH_START_MIN) return false;
   if (overlapsSummerAfternoonBlackout(startSlot, durationMins, reservationYmd)) {
-    return false;
-  }
-  if (overlapsTempSlotBlackout(startSlot, durationMins, reservationYmd)) {
-    return false;
-  }
-  if (overlapsSpecific1500Blackout(startSlot, durationMins, reservationYmd)) {
-    return false;
-  }
-  if (overlapsAug14AfternoonBlackout(startSlot, durationMins, reservationYmd)) {
     return false;
   }
   const keys = windowsOverlappingBooking(startSlot, durationMins);
@@ -680,16 +648,26 @@ async function validateSubmitFields(
     recommendedReasons = rr.map((x) => str(x)).filter(Boolean);
   }
 
-  let slotQ = sbAdmin
-    .from("reservations")
-    .select(
-      "id, reservation_time, reservation_duration_minutes, person_info",
-    )
-    .eq("reservation_date", date)
-    .neq("status", "반려");
-  const { data: slotRows, error: slotErr } = await slotQ;
+  const [slotResult, timeBlockResult] = await Promise.all([
+    sbAdmin
+      .from("reservations")
+      .select(
+        "id, reservation_time, reservation_duration_minutes, person_info",
+      )
+      .eq("reservation_date", date)
+      .neq("status", "반려"),
+    sbAdmin
+      .from("global_blocked_time_ranges")
+      .select("start_date, end_date, start_time, end_time, reason")
+      .lte("start_date", date)
+      .gte("end_date", date),
+  ]);
+  const { data: slotRows, error: slotErr } = slotResult;
   if (slotErr) {
     return { ok: false, error: "예약 시간 확인 오류: " + slotErr.message };
+  }
+  if (timeBlockResult.error) {
+    return { ok: false, error: "환입 제한 시간 확인 오류: " + timeBlockResult.error.message };
   }
 
   const filtered = (slotRows || []).filter((r) => {
@@ -705,8 +683,14 @@ async function validateSubmitFields(
         "하절기(7월 1일~8월 31일)에는 13:00~14:00 구간과 겹치는 예약이 불가합니다. 다른 시간을 선택해 주세요.",
     };
   }
-  if (overlapsTempSlotBlackout(timeSlot, effDur, date)) {
-    return { ok: false, error: TEMP_SLOT_BLACKOUT_ERROR };
+  const adminTimeBlock = findOverlappingAdminTimeBlock(
+    timeBlockResult.data || [],
+    timeSlot,
+    effDur,
+    date,
+  );
+  if (adminTimeBlock) {
+    return { ok: false, error: adminTimeBlockErrorMessage(adminTimeBlock) };
   }
   if (!slotRangeFits(occ, timeSlot, effDur, date)) {
     return {

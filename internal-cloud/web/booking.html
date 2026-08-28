@@ -1509,6 +1509,8 @@
     var masterBranchBlockedYmd = {};
     /** 'YYYY-MM-DD': true — 전 지사 공통 환입 불가일 */
     var masterGlobalBlockedYmd = {};
+    /** 전체 예약 공통 환입 불가 시간대 */
+    var masterGlobalBlockedTimeRanges = [];
     var selectedBranchId = null;
     var selectedBranchName = '';
     var selectedCompanyId = null;
@@ -2504,6 +2506,7 @@
       masterBranchWeekdays = {};
       masterBranchBlockedYmd = {};
       masterGlobalBlockedYmd = {};
+      masterGlobalBlockedTimeRanges = [];
       var banner = document.getElementById('loginMembershipBanner');
       var namesEl = document.getElementById('loginMembershipCompanyNames');
       var hintEl = document.getElementById('loginMembershipExtraHint');
@@ -2513,7 +2516,12 @@
         var session = sessWrap && sessWrap.data && sessWrap.data.session;
 
         var r4gP = sb.from('global_blocked_dates').select('blocked_date');
-        isMasterAccount = await resolveIsMasterAccount(sb, session);
+        var timeBlocksP = sb.from('global_blocked_time_ranges').select('start_date,end_date,start_time,end_time,reason');
+        var baseSettings = await Promise.all([resolveIsMasterAccount(sb, session), timeBlocksP]);
+        isMasterAccount = baseSettings[0];
+        var timeBlocksResult = baseSettings[1];
+        if (timeBlocksResult.error) console.warn(timeBlocksResult.error);
+        masterGlobalBlockedTimeRanges = timeBlocksResult.data || [];
 
         if (isMasterAccount) {
           var globalOnly = await r4gP;
@@ -2677,13 +2685,6 @@
     /** 하절기(7.1~8.31) 13:00~14:00 구간과 겹치는 예약 불가 */
     const SUMMER_BLACKOUT_START_MIN = 13 * 60;
     const SUMMER_BLACKOUT_END_MIN = 14 * 60;
-    /** 2026-08-03~2026-09-03 11:30·15:30 예약 불가 */
-    const TEMP_SLOT_BLACKOUT_START_YMD = '2026-08-03';
-    const TEMP_SLOT_BLACKOUT_END_YMD = '2026-09-03';
-    const TEMP_BLOCKED_SLOT_MINS = [11 * 60 + 30, 15 * 60 + 30];
-    const SPECIFIC_1500_BLACKOUT_YMDS = ['2026-08-21', '2026-08-28', '2026-09-04'];
-    const AUG14_AFTERNOON_BLACKOUT_YMD = '2026-08-14';
-    const AUG14_AFTERNOON_BLOCKED_SLOT_MINS = [14 * 60, 14 * 60 + 30, 15 * 60, 15 * 60 + 30];
 
     const DAY_NAMES = ['일','월','화','수','목','금','토'];
 
@@ -2704,43 +2705,21 @@
       return sm < SUMMER_BLACKOUT_END_MIN && end > SUMMER_BLACKOUT_START_MIN;
     }
 
-    function isYmdInTempSlotBlackoutPeriod(ymd) {
-      return ymd >= TEMP_SLOT_BLACKOUT_START_YMD && ymd <= TEMP_SLOT_BLACKOUT_END_YMD;
-    }
-
-    function overlapsTempSlotBlackout(startSlot, durationMins, ymd) {
-      if (!ymd || !isYmdInTempSlotBlackoutPeriod(ymd)) return false;
+    function overlapsAdminTimeBlock(startSlot, durationMins, ymd) {
+      if (!ymd) return false;
       var sm = slotStartToMinutes(startSlot);
       if (sm == null) return false;
       var end = sm + durationMins;
-      for (var ti = 0; ti < TEMP_BLOCKED_SLOT_MINS.length; ti++) {
-        var bs = TEMP_BLOCKED_SLOT_MINS[ti];
-        var be = bs + 30;
-        if (sm < be && end > bs) return true;
+      for (var i = 0; i < masterGlobalBlockedTimeRanges.length; i++) {
+        var row = masterGlobalBlockedTimeRanges[i] || {};
+        var startDate = row.start_date != null ? String(row.start_date).substring(0, 10) : '';
+        var endDate = row.end_date != null ? String(row.end_date).substring(0, 10) : '';
+        if (!startDate || !endDate || ymd < startDate || ymd > endDate) continue;
+        var bs = slotStartToMinutes(String(row.start_time || '').substring(0, 5));
+        var be = slotStartToMinutes(String(row.end_time || '').substring(0, 5));
+        if (bs != null && be != null && sm < be && end > bs) return true;
       }
       return false;
-    }
-
-    function overlapsAug14AfternoonBlackout(startSlot, durationMins, ymd) {
-      if (ymd !== AUG14_AFTERNOON_BLACKOUT_YMD) return false;
-      var sm = slotStartToMinutes(startSlot);
-      if (sm == null) return false;
-      var end = sm + durationMins;
-      for (var ai = 0; ai < AUG14_AFTERNOON_BLOCKED_SLOT_MINS.length; ai++) {
-        var bs = AUG14_AFTERNOON_BLOCKED_SLOT_MINS[ai];
-        var be = bs + 30;
-        if (sm < be && end > bs) return true;
-      }
-      return false;
-    }
-
-    function overlapsSpecific1500Blackout(startSlot, durationMins, ymd) {
-      if (SPECIFIC_1500_BLACKOUT_YMDS.indexOf(ymd) < 0) return false;
-      var sm = slotStartToMinutes(startSlot);
-      if (sm == null) return false;
-      var end = sm + durationMins;
-      var blockedStart = 15 * 60;
-      return sm < blockedStart + 30 && end > blockedStart;
     }
 
     function updateSummerNoticeVisibility() {
@@ -3266,9 +3245,7 @@
       if (end > DAY_END_MIN) return false;
       if (sm < LUNCH_END_MIN && end > LUNCH_START_MIN) return false;
       if (overlapsSummerAfternoonBlackout(startSlot, durationMins, reservationYmd)) return false;
-      if (overlapsTempSlotBlackout(startSlot, durationMins, reservationYmd)) return false;
-      if (overlapsSpecific1500Blackout(startSlot, durationMins, reservationYmd)) return false;
-      if (overlapsAug14AfternoonBlackout(startSlot, durationMins, reservationYmd)) return false;
+      if (overlapsAdminTimeBlock(startSlot, durationMins, reservationYmd)) return false;
       var keys = windowsOverlappingBooking(startSlot, durationMins);
       for (var i = 0; i < keys.length; i++) {
         var s = keys[i];

@@ -395,13 +395,80 @@ Deno.serve(async (req: Request) => {
       return json(200, { ok: true, row: ins });
     }
 
+    if (action === "blocked_time_add") {
+      const blockedDate = str(body.blocked_date).slice(0, 10);
+      const startTime = str(body.start_time).slice(0, 5);
+      const endTime = str(body.end_time).slice(0, 5);
+      const reasonRaw = body.reason != null ? String(body.reason) : "";
+      const reason = reasonRaw.trim().slice(0, 500) || null;
+      const timeRe = /^(?:0[9]|1[0-5]):(?:00|30)$|^16:00$/;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(blockedDate)) {
+        return json(400, { ok: false, error: "blocked_date 형식이 올바르지 않습니다." });
+      }
+      if (!timeRe.test(startTime) || !timeRe.test(endTime)) {
+        return json(400, { ok: false, error: "시간은 09:00~16:00 사이의 30분 단위로 선택해 주세요." });
+      }
+      if (startTime < "09:00" || startTime >= "16:00" || endTime <= startTime || endTime > "16:00") {
+        return json(400, { ok: false, error: "종료시간은 시작시간보다 늦고 16:00 이하여야 합니다." });
+      }
+
+      const { data: ins, error: insErr } = await sb
+        .from("global_blocked_time_ranges")
+        .insert({
+          start_date: blockedDate,
+          end_date: blockedDate,
+          start_time: startTime,
+          end_time: endTime,
+          reason,
+        })
+        .select("id, start_date, end_date, start_time, end_time, reason")
+        .single();
+      if (insErr) {
+        if (String(insErr.message || "").includes("duplicate") || insErr.code === "23505") {
+          return json(409, { ok: false, error: "같은 날짜와 시간대가 이미 등록되어 있습니다." });
+        }
+        throw insErr;
+      }
+
+      const { data: reservationRows, error: reservationErr } = await sb
+        .from("reservations")
+        .select("reservation_time, reservation_duration_minutes, person_info")
+        .eq("reservation_date", blockedDate)
+        .neq("status", "반려");
+      if (reservationErr) throw reservationErr;
+      const toMinutes = (value: unknown): number | null => {
+        const match = /^(\d{2}):(\d{2})/.exec(str(value));
+        if (!match) return null;
+        return Number(match[1]) * 60 + Number(match[2]);
+      };
+      const blockedStartMinutes = toMinutes(startTime)!;
+      const blockedEndMinutes = toMinutes(endTime)!;
+      const conflictCount = (reservationRows ?? []).filter((row) => {
+        const reservationStart = toMinutes(row.reservation_time);
+        if (reservationStart == null) return false;
+        const personInfo = row.person_info && typeof row.person_info === "object"
+          ? row.person_info as Record<string, unknown>
+          : {};
+        const duration = Number(row.reservation_duration_minutes) === 60 ||
+            Number(personInfo.reservation_duration_minutes) === 60
+          ? 60
+          : 30;
+        return reservationStart < blockedEndMinutes && reservationStart + duration > blockedStartMinutes;
+      }).length;
+
+      return json(200, { ok: true, row: ins, conflicting_reservations: conflictCount });
+    }
+
     if (action === "blocked_delete") {
       const id = str(body.id);
       if (!id) {
         return json(400, { ok: false, error: "id가 필요합니다." });
       }
-      const scope = str(body.blocked_scope) === "branch" ? "branch" : "global";
-      const table = scope === "branch" ? "branch_blocked_dates" : "global_blocked_dates";
+      const scopeRaw = str(body.blocked_scope);
+      const scope = scopeRaw === "branch" ? "branch" : (scopeRaw === "time" ? "time" : "global");
+      const table = scope === "branch"
+        ? "branch_blocked_dates"
+        : (scope === "time" ? "global_blocked_time_ranges" : "global_blocked_dates");
       const { error: delErr } = await sb.from(table).delete().eq("id", id);
       if (delErr) throw delErr;
       return json(200, { ok: true });
